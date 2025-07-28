@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shiba Tracker 🐶💰</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for Shiba theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fef3c7; /* Light creamy yellow, like Shiba fur */
+            color: #4a4a4a; /* Dark gray for text */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+            align-items: center;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .header {
+            color: #e67e22; /* Orange, like Shiba's nose/ears */
+            font-weight: 700;
+            font-size: 2.25rem; /* Larger title */
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .shiba-emoji {
+            font-size: 2.5rem;
+            line-height: 1;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #d35400; /* Darker orange */
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f0b27a; /* Light orange border */
+            padding-bottom: 0.5rem;
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px dashed #f0b27a;
+        }
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        .summary-label {
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: #555;
+        }
+        .summary-value {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .income-value {
+            color: #27ae60; /* Green */
+        }
+        .expense-value {
+            color: #e74c3c; /* Red */
+        }
+        .balance-value {
+            color: #3498db; /* Blue */
+            font-size: 1.4rem;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0;
+            border-bottom: 1px dotted #e0e0e0;
+            font-size: 0.95rem;
+        }
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        .transaction-detail-col {
+            text-align: left;
+            flex-grow: 1;
+            margin-right: 0.5rem;
+        }
+        .transaction-amount-col {
+            font-weight: 600;
+            text-align: right;
+        }
+        .call-to-action {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: #ffe0b2; /* Lighter orange */
+            border-radius: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        .action-button {
+            background-color: #f39c12; /* Bright orange */
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 1rem;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .action-button:hover {
+            background-color: #e67e22; /* Darker orange on hover */
+        }
+        .footer-text {
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #777;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+        .form-group input[type="number"],
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        .radio-group input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+        .radio-group label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .submit-button {
+            background-color: #2ecc71; /* Green for submit */
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .submit-button:hover {
+            background-color: #27ae60; /* Darker green on hover */
+        }
+        .message-box {
+            background-color: #f0f8ff;
+            border: 1px solid #a8d9ff;
+            color: #31708f;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: left;
+            display: none; /* Hidden by default */
+        }
+        .message-box.success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .message-box.error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">
+            <span class="shiba-emoji">🐶</span> Shiba Tracker <span class="shiba-emoji">💰</span>
+        </h1>
+
+        <div class="message-box" id="messageBox"></div>
+
+        <div class="mb-6">
+            <h2 class="section-title">สรุปเดือนนี้ 🗓️</h2>
+            <div class="summary-item">
+                <span class="summary-label">รายรับทั้งหมด:</span>
+                <span class="summary-value income-value" id="monthly-income">0.00 บาท</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">รายจ่ายทั้งหมด:</span>
+                <span class="summary-value expense-value" id="monthly-expense">0.00 บาท</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">ยอดคงเหลือ:</span>
+                <span class="summary-value balance-value" id="monthly-balance">0.00 บาท</span>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h2 class="section-title">รายการล่าสุด 📝</h2>
+            <div id="recent-transactions">
+                <p class="text-gray-500">กำลังโหลดรายการล่าสุด...</p>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h2 class="section-title">เพิ่มรายการใหม่ ➕➖</h2>
+            <form id="transactionForm" class="text-left">
+                <div class="form-group">
+                    <label for="amount">จำนวนเงิน (บาท):</label>
+                    <input type="number" id="amount" step="0.01" min="0.01" placeholder="เช่น 150.50" required class="focus:ring-orange-500 focus:border-orange-500">
+                </div>
+                <div class="form-group">
+                    <label>ประเภท:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="type" value="income" required checked> รายรับ
+                        </label>
+                        <label>
+                            <input type="radio" name="type" value="expense"> รายจ่าย
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="category">หมวดหมู่:</label>
+                    <select id="category" required class="focus:ring-orange-500 focus:border-orange-500">
+                        <option value="">เลือกหมวดหมู่</option>
+                        <!-- Categories will be loaded dynamically here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="detail">รายละเอียด (ไม่บังคับ):</label>
+                    <input type="text" id="detail" placeholder="เช่น ซื้อกาแฟ, เงินเดือน" class="focus:ring-orange-500 focus:border-orange-500">
+                </div>
+                <button type="submit" class="submit-button">บันทึกรายการฮับ! ✨</button>
+            </form>
+        </div>
+
+        <div class="call-to-action">
+            <p class="text-base font-medium">อยากดูรายงานละเอียดกว่านี้ หรือจัดการงบประมาณ/หมวดหมู่ไหมฮับ?</p>
+            <p class="text-sm text-gray-600 mt-2">โปรดกลับไปที่แชทบอทน้องชิบะ แล้วใช้คำสั่งต่างๆ ได้เลยฮับ! 🐾</p>
+            <button class="action-button" onclick="Telegram.WebApp.close()">ปิด Mini App</button>
+        </div>
+    </div>
+
+    <p class="footer-text">Powered by น้องชิบะบอท 🐶</p>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Initialize Telegram WebApp
+        Telegram.WebApp.ready();
+
+        const messageBox = document.getElementById('messageBox');
+        const monthlyIncomeElem = document.getElementById('monthly-income');
+        const monthlyExpenseElem = document.getElementById('monthly-expense');
+        const monthlyBalanceElem = document.getElementById('monthly-balance');
+        const recentTransactionsDiv = document.getElementById('recent-transactions');
+        const transactionForm = document.getElementById('transactionForm');
+        const amountInput = document.getElementById('amount');
+        const typeInputs = document.querySelectorAll('input[name="type"]');
+        const categorySelect = document.getElementById('category');
+        const detailInput = document.getElementById('detail');
+
+        let allCategories = { "รายรับ": [], "รายจ่าย": [] };
+
+        // Function to show messages
+        function showMessage(message, type = 'info') {
+            messageBox.innerText = message;
+            messageBox.className = `message-box ${type}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000); // Hide after 5 seconds
+        }
+
+        // Function to render recent transactions
+        function renderRecentTransactions(transactions) {
+            recentTransactionsDiv.innerHTML = ''; // Clear previous transactions
+            if (transactions.length === 0) {
+                recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีรายการบันทึกเลยฮับ! 😔</p>';
+                return;
+            }
+            transactions.forEach(t => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'transaction-item';
+                const typeEmoji = t.type === 'income' ? '➕' : '➖';
+                const amountColorClass = t.type === 'income' ? 'text-green-600' : 'text-red-600';
+                const formattedAmount = t.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const detailText = t.detail && t.detail !== 'ไม่มีรายละเอียด' ? ` (${t.detail})` : '';
+                const transactionDate = new Date(t.date);
+                const timeString = transactionDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                itemDiv.innerHTML = `
+                    <span class="${amountColorClass} mr-2">${typeEmoji}</span>
+                    <span class="transaction-detail-col">${t.category}${detailText}</span>
+                    <span class="text-gray-500 text-xs mr-2">${timeString}</span>
+                    <span class="transaction-amount-col ${amountColorClass}">${formattedAmount} บาท</span>
+                `;
+                recentTransactionsDiv.appendChild(itemDiv);
+            });
+        }
+
+        // Function to populate categories dropdown
+        function populateCategories(selectedType) {
+            categorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>'; // Reset
+            const categories = allCategories[selectedType === 'income' ? 'รายรับ' : 'รายจ่าย'];
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.innerText = cat;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        // Handle type radio button change
+        typeInputs.forEach(input => {
+            input.addEventListener('change', (event) => {
+                populateCategories(event.target.value);
+            });
+        });
+
+        // Load initial data from start_param
+        if (Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param) {
+            try {
+                const decodedData = decodeURIComponent(Telegram.WebApp.initDataUnsafe.start_param);
+                const initialData = JSON.parse(decodedData);
+
+                // Update summary
+                if (initialData.summary) {
+                    monthlyIncomeElem.innerText = `${initialData.summary.income.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                    monthlyExpenseElem.innerText = `${initialData.summary.expense.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                    monthlyBalanceElem.innerText = `${initialData.summary.balance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                }
+
+                // Render recent transactions
+                if (initialData.recent_transactions) {
+                    renderRecentTransactions(initialData.recent_transactions);
+                }
+
+                // Store and populate categories
+                if (initialData.categories) {
+                    allCategories = initialData.categories;
+                    // Populate categories based on default selected type (income)
+                    populateCategories('income');
+                }
+
+            } catch (e) {
+                console.error("Error parsing start_param:", e);
+                showMessage("ฮือๆ เกิดข้อผิดพลาดในการโหลดข้อมูลเริ่มต้นฮับ! 😭", 'error');
+                // Fallback to dummy data or empty state if parsing fails
+                monthlyIncomeElem.innerText = '0.00 บาท';
+                monthlyExpenseElem.innerText = '0.00 บาท';
+                monthlyBalanceElem.innerText = '0.00 บาท';
+                recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ไม่สามารถโหลดรายการได้ฮับ 😔</p>';
+            }
+        } else {
+            // If no start_param, show empty/default state
+            monthlyIncomeElem.innerText = '0.00 บาท';
+            monthlyExpenseElem.innerText = '0.00 บาท';
+            monthlyBalanceElem.innerText = '0.00 บาท';
+            recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีรายการบันทึกเลยฮับ! 😔</p>';
+            showMessage("น้องชิบะไม่ได้รับข้อมูลเริ่มต้นฮับ! โปรดลองเปิด Mini App ใหม่นะฮับ �", 'info');
+        }
+
+        // Handle form submission
+        transactionForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const amount = parseFloat(amountInput.value);
+            const type = document.querySelector('input[name="type"]:checked').value;
+            const category = categorySelect.value;
+            const detail = detailInput.value.trim();
+
+            if (isNaN(amount) || amount <= 0) {
+                showMessage("โปรดระบุจำนวนเงินที่ถูกต้องนะฮับ! (ต้องมากกว่า 0) 🥺", 'error');
+                return;
+            }
+            if (!category) {
+                showMessage("โปรดเลือกหมวดหมู่ด้วยนะฮับ! 📝", 'error');
+                return;
+            }
+
+            const transactionData = {
+                action: 'add_transaction',
+                payload: {
+                    amount: amount,
+                    type: type,
+                    category: category,
+                    detail: detail || 'ไม่มีรายละเอียด',
+                    date: new Date().toISOString() // Current date/time in ISO format
+                }
+            };
+
+            // Send data to the bot
+            try {
+                Telegram.WebApp.sendData(JSON.stringify(transactionData));
+                showMessage("ส่งรายการให้น้องชิบะบันทึกแล้วฮับ! ✨", 'success');
+                // Optionally clear form
+                transactionForm.reset();
+                populateCategories('income'); // Reset category dropdown
+            } catch (e) {
+                console.error("Error sending data to bot:", e);
+                showMessage("ฮือๆ ส่งข้อมูลให้น้องชิบะไม่สำเร็จฮับ! 😭", 'error');
+            }
+        });
+    </script>
+</body>
+</html>
