@@ -1164,111 +1164,7 @@
             document.getElementById('amount').value = amount;
         }
 
-        // MongoDB API Functions
-        async function testConnection() {
-            try {
-                console.log('Testing connection to:', API_BASE_URL);
-                const response = await fetch(`${API_BASE_URL}/health`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('API Health Check:', result);
-                    return true;
-                } else {
-                    console.error('API Health Check failed:', response.status, response.statusText);
-                    return false;
-                }
-            } catch (error) {
-                console.error('Connection test failed:', error);
-                return false;
-            }
-        }
-
-        async function initializeUser() {
-            try {
-                // Test connection first
-                const isConnected = await testConnection();
-                if (!isConnected) {
-                    throw new Error('API server is not responding');
-                }
-
-                console.log('Initializing user:', userInfo);
-                const response = await fetch(`${API_BASE_URL}/users/init`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(userInfo)
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-                }
-                
-                const result = await response.json();
-                console.log('User initialized successfully:', result);
-                return result;
-            } catch (error) {
-                console.error('Error initializing user:', error);
-                throw error;
-            }
-        }
-
-        async function loadUserData() {
-            try {
-                // Load user profile with categories
-                const userResponse = await fetch(`${API_BASE_URL}/users/${userId}`);
-                if (userResponse.ok) {
-                    const userData = await userResponse.json();
-                    if (userData.user && userData.user.categories) {
-                        categories = userData.user.categories;
-                        console.log('Loaded user categories:', categories);
-                        // Update category dropdowns after loading
-                        updateCategoryOptions();
-                        updateBudgetCategoryOptions();
-                    }
-                }
-
-                // Load transactions
-                const transactionsResponse = await fetch(`${API_BASE_URL}/transactions/${userId}`);
-                if (transactionsResponse.ok) {
-                    const transactionsData = await transactionsResponse.json();
-                    transactions = transactionsData.transactions || [];
-                    
-                    // No welcome message needed
-                    console.log('Transactions loaded:', transactions.length);
-                } else {
-                    // User not found, initialize empty data
-                    console.log('New user, initializing empty data');
-                }
-
-                // Load budgets
-                const budgetsResponse = await fetch(`${API_BASE_URL}/budgets/${userId}`);
-                if (budgetsResponse.ok) {
-                    const budgetsData = await budgetsResponse.json();
-                    budgets = budgetsData.budgets || [];
-                }
-
-                // Update displays
-                displayTransactions();
-                updateSummary();
-                displayBudgets();
-                
-            } catch (error) {
-                console.error('Error loading user data:', error);
-                // Emergency fallback to localStorage
-                loadLocalBackupData();
-            }
-        }
-
-
-
+        // Load local backup data as fallback
         function loadLocalBackupData() {
             // Load from localStorage as emergency fallback only
             const savedTransactions = localStorage.getItem('shiba_transactions');
@@ -1284,16 +1180,15 @@
             // Load saved categories or use defaults
             const savedCategories = localStorage.getItem('shiba_categories');
             if (savedCategories) {
-                categories = JSON.parse(savedCategories);
+                userCategories = JSON.parse(savedCategories);
             }
             
-            // Update category dropdowns
-            updateCategoryOptions();
+            // Update displays
+            renderSummary();
+            renderRecentTransactions();
+            populateCategories();
+            renderBudgets();
             updateBudgetCategoryOptions();
-            
-            displayTransactions();
-            updateSummary();
-            displayBudgets();
         }
 
         async function saveTransactionToMongoDB(transaction) {
@@ -1367,18 +1262,14 @@
         }
 
         // Add transaction - Make it global
-        window.addTransaction = async function() {
+        window.addTransaction = function() {
             const amount = parseFloat(document.getElementById('amount').value);
             const category = document.getElementById('category').value;
             const description = document.getElementById('description').value;
             const date = document.getElementById('date').value;
 
             if (!amount || amount <= 0) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
-                } else {
-                    alert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
-                }
+                alert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
                 return;
             }
 
@@ -1388,15 +1279,12 @@
             }
 
             if (!date) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
-                } else {
-                    alert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
-                }
+                alert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
                 return;
             }
 
             const transaction = {
+                id: Date.now(),
                 user_id: userId,
                 amount: amount,
                 type: currentTransactionType,
@@ -1406,21 +1294,18 @@
                 ref_id: null
             };
 
-            try {
-                // Save to MongoDB
-                await saveTransactionToMongoDB(transaction);
-                
-                // Add to local array for immediate display
-                transactions.unshift(transaction);
-                
-                // Send to Telegram bot
-                sendToBot(transaction);
-                
-            } catch (error) {
-                console.error('Error saving transaction:', error);
-                // Still add to local array as fallback
-                transactions.unshift(transaction);
-                localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
+            // Add to local array for immediate display
+            transactions.unshift(transaction);
+            
+            // Send to bot
+            const data = {
+                action: 'add_transaction',
+                user_id: userId,
+                transaction: transaction
+            };
+            
+            if (WebApp && WebApp.sendData) {
+                WebApp.sendData(JSON.stringify(data));
             }
 
             // Clear form
@@ -1430,19 +1315,18 @@
             
             // Hide modal and show success
             hideAddTransactionModal();
-            if (tg && tg.showAlert) {
-                tg.showAlert('🎉 เย้! น้องชิบะบันทึกให้แล้วนะครับ! เก่งมากเลย! 🐾');
-            } else {
-                alert('🎉 เย้! น้องชิบะบันทึกให้แล้วนะครับ! เก่งมากเลย! 🐾');
-            }
+            alert('🎉 เย้! น้องชิบะบันทึกให้แล้วนะครับ! เก่งมากเลย! 🐾');
             
-            // Switch to history tab and refresh data
-            switchTab('history');
+            // Update displays
+            renderSummary();
+            renderRecentTransactions();
             
-            // Refresh data from MongoDB
-            setTimeout(async () => {
-                await loadUserData();
-            }, 500);
+            // Close the mini app
+            setTimeout(() => {
+                if (WebApp && WebApp.close) {
+                    WebApp.close();
+                }
+            }, 1000);
         }
 
         // Send transaction to bot
@@ -2293,7 +2177,7 @@
             if (transactionTypeSelect) {
                 transactionTypeSelect.addEventListener('change', () => {
                     currentTransactionType = transactionTypeSelect.value;
-                    updateCategoryOptions();
+                    populateCategories();
                 });
             }
             
@@ -2314,7 +2198,7 @@
             
             budgetCategorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>';
             
-            if (userCategories.expense && userCategories.expense.length > 0) {
+            if (userCategories && userCategories.expense && userCategories.expense.length > 0) {
                 userCategories.expense.forEach(category => {
                     const option = document.createElement('option');
                     option.value = category;
@@ -2761,5 +2645,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966cb746f3d926f9',t:'MTc1Mzc5MzE1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966cc228e09a7b6e',t:'MTc1Mzc5MzU5OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
