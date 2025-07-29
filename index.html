@@ -6,7 +6,7 @@
     <title>🐕 Shiba Bot - เพื่อนจัดการเงินของคุณ</title>
     <meta name="description" content="น้องชิบะจะช่วยดูแลการเงินของคุณ! 🐾">
     <meta name="theme-color" content="#FF8C42">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://ocr-proxy-i92y.onrender.com https://shiba-bot-api.onrender.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://ocr-proxy-i92y.onrender.com https://shiba-bot-api.onrender.com https://telegram.org;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://ocr-proxy-i92y.onrender.com https://shiba-bot-api-production.up.railway.app data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://ocr-proxy-i92y.onrender.com https://shiba-bot-api-production.up.railway.app https://telegram.org;">
     
     <!-- PWA Support -->
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2hpYmEgQm90IC0g4LmA4Lie4Li34LmI4Lit4LiZ4LiI4Lix4LiU4LiB4Liy4Lij4LmA4LiH4Li04LiZ4LiC4Lit4LiH4LiE4Li44LiTIiwic2hvcnRfbmFtZSI6IlNoaWJhIEJvdCIsInN0YXJ0X3VybCI6Ii8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjRkY4QzQyIiwidGhlbWVfY29sb3IiOiIjRkY4QzQyIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjNhV1IwYUQwaU1USTRJaUJvWldsbmFIUTlJakV5T0NJZ2RtbGxkMEp2ZUQwaU1DQXdJREV5T0NBeU9EZ2lJSGh0Ykc1elBTSm9kSFJ3T2k4dmQzZDNMbmN6TG05eVp5OHlNREF3TDNOMlp5SStQR05wY21Oc1pTQmplRDBpTmpRaUlHTjVQU0kyTkNJZ2NqMGlOVEFpSUdacGJHdzlJaU5HUmpoRE5ESWlMejQ4ZEdWNGRDQjRQU0kyTkNJZ2VUMGlOekFpSUdacGJHdzlJaU5tWm1ZaUlHWnZiblF0YzJsNlpUMGlNVGdpSUdadmJuUXRabUZ0YVd4NVBTSnRiMjV2YzNCaFkyVWlJSFJsZUhRdFlXNWphRzl5UFNKdGFXUmtiR1VpUGlCOElEeDBjM0JoYmlCNFBTSTJOQ0lnZVQwaU9EQWlQaUE4TDNSemNHRnVQaUE4TDNSbGVIUStQQzl6ZG1jKyIsInNpemVzIjoiMTI4eDEyOCIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
@@ -920,7 +920,7 @@
         let userInfo = null;
         
         // MongoDB API Configuration
-        const API_BASE_URL = 'https://shiba-bot-api.onrender.com/api'; // Replace with your actual API URL
+        const API_BASE_URL = 'https://shiba-bot-api-production.up.railway.app/api'; // Updated working API URL
 
         // Initialize the app
         async function init() {
@@ -979,12 +979,16 @@
             } catch (e) {
                 console.error('Initialization error:', e);
                 
-                // Show error message
+                // Show error message with more details
+                console.error('Full initialization error:', e);
                 if (tg && tg.showAlert) {
-                    tg.showAlert('🐕 น้องชิบะเชื่อมต่อไม่ได้ครับ! กรุณาลองใหม่อีกครั้ง');
+                    tg.showAlert(`🐕 น้องชิบะเชื่อมต่อฐานข้อมูลไม่ได้ครับ!\n\nError: ${e.message}\n\nจะใช้ข้อมูลในเครื่องแทนนะครับ`);
                 } else {
-                    alert('🐕 น้องชิบะเชื่อมต่อไม่ได้ครับ! กรุณาลองใหม่อีกครั้ง');
+                    alert(`🐕 น้องชิบะเชื่อมต่อฐานข้อมูลไม่ได้ครับ!\n\nError: ${e.message}\n\nจะใช้ข้อมูลในเครื่องแทนนะครับ`);
                 }
+                
+                // Load local backup data as fallback
+                loadLocalBackupData();
             }
         }
 
@@ -1177,8 +1181,39 @@
         }
 
         // MongoDB API Functions
+        async function testConnection() {
+            try {
+                console.log('Testing connection to:', API_BASE_URL);
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('API Health Check:', result);
+                    return true;
+                } else {
+                    console.error('API Health Check failed:', response.status, response.statusText);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                return false;
+            }
+        }
+
         async function initializeUser() {
             try {
+                // Test connection first
+                const isConnected = await testConnection();
+                if (!isConnected) {
+                    throw new Error('API server is not responding');
+                }
+
+                console.log('Initializing user:', userInfo);
                 const response = await fetch(`${API_BASE_URL}/users/init`, {
                     method: 'POST',
                     headers: {
@@ -1188,13 +1223,16 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 }
                 
                 const result = await response.json();
-                console.log('User initialized:', result);
+                console.log('User initialized successfully:', result);
+                return result;
             } catch (error) {
                 console.error('Error initializing user:', error);
+                throw error;
             }
         }
 
@@ -1219,13 +1257,11 @@
                     const transactionsData = await transactionsResponse.json();
                     transactions = transactionsData.transactions || [];
                     
-                    // Show welcome message if no transactions
-                    if (transactions.length === 0) {
-                        showWelcomeMessage();
-                    }
+                    // No welcome message needed
+                    console.log('Transactions loaded:', transactions.length);
                 } else {
-                    // If user not found, show welcome message
-                    showWelcomeMessage();
+                    // User not found, initialize empty data
+                    console.log('New user, initializing empty data');
                 }
 
                 // Load budgets
@@ -1242,21 +1278,12 @@
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
-                // Show welcome message for new users
-                showWelcomeMessage();
                 // Emergency fallback to localStorage
                 loadLocalBackupData();
             }
         }
 
-        function showWelcomeMessage() {
-            const userName = userInfo?.first_name || 'คุณ';
-            if (tg && tg.showAlert) {
-                tg.showAlert(`🎉 ยินดีต้อนรับ ${userName}!\n\n🐕 น้องชิบะพร้อมช่วยจัดการเงินแล้วครับ!\n💰 เริ่มบันทึกรายการแรกกันเลย!`);
-            } else {
-                alert(`🎉 ยินดีต้อนรับ ${userName}!\n\n🐕 น้องชิบะพร้อมช่วยจัดการเงินแล้วครับ!\n💰 เริ่มบันทึกรายการแรกกันเลย!`);
-            }
-        }
+
 
         function loadLocalBackupData() {
             // Load from localStorage as emergency fallback only
@@ -2769,5 +2796,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c7fe80595d036',t:'MTc1Mzc5MDg4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c8fcb874a26cd',t:'MTc1Mzc5MTUzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
