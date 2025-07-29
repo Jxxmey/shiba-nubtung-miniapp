@@ -682,6 +682,9 @@
     <div class="header">
         <h1>🐕 น้องชิบะ</h1>
         <p>🐾 พร้อมช่วยจัดการเงินของคุณแล้วครับ! 💰</p>
+        <div id="sync-status" style="margin-top: 8px; font-size: 12px; opacity: 0.8; display: none;">
+            <span id="sync-indicator">🔄</span> <span id="sync-text">กำลังซิงค์ข้อมูล...</span>
+        </div>
     </div>
 
     <div class="tab-container">
@@ -940,6 +943,9 @@
                     };
                     
                     console.log('Telegram user_id:', userId);
+                    
+                    // Load data from bot first, then fallback to local
+                    loadDataFromBot();
                 } else {
                     // For testing outside Telegram - generate a unique test user ID
                     userId = `test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -952,6 +958,9 @@
                     };
                     
                     console.log('Test mode - generated user_id:', userId);
+                    
+                    // Load local data only in test mode
+                    loadLocalData();
                 }
                 
                 // Set today's date as default
@@ -960,15 +969,16 @@
                     dateInput.valueAsDate = new Date();
                 }
                 
-                // Load data from localStorage
-                loadLocalData();
-                
                 // Set up main button
                 try {
                     if (tg && tg.MainButton) {
-                        tg.MainButton.setText('ปิด');
+                        tg.MainButton.setText('🔄 ซิงค์ข้อมูล');
                         tg.MainButton.onClick(() => {
-                            if (tg.close) tg.close();
+                            syncAllDataToBot();
+                            tg.MainButton.setText('✅ ซิงค์แล้ว');
+                            setTimeout(() => {
+                                tg.MainButton.setText('🔄 ซิงค์ข้อมูล');
+                            }, 2000);
                         });
                         tg.MainButton.show();
                     }
@@ -1116,6 +1126,11 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
+            // Sync to bot
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
+            
             // Update dropdown
             updateCategoryOptions();
             
@@ -1189,6 +1204,11 @@
             
             // Send to bot
             sendToBot(transaction);
+            
+            // Auto-sync all data to keep everything in sync
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
 
             // Clear form
             document.getElementById('amount').value = '';
@@ -1233,6 +1253,117 @@
                 }
             } catch (e) {
                 console.log('Cannot send data to bot:', e);
+            }
+        }
+
+        // Show sync status
+        function showSyncStatus(message = 'กำลังซิงค์ข้อมูล...', indicator = '🔄') {
+            const statusElement = document.getElementById('sync-status');
+            const indicatorElement = document.getElementById('sync-indicator');
+            const textElement = document.getElementById('sync-text');
+            
+            if (statusElement && indicatorElement && textElement) {
+                indicatorElement.textContent = indicator;
+                textElement.textContent = message;
+                statusElement.style.display = 'block';
+            }
+        }
+
+        // Hide sync status
+        function hideSyncStatus() {
+            const statusElement = document.getElementById('sync-status');
+            if (statusElement) {
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        // Sync all data to bot
+        function syncAllDataToBot() {
+            showSyncStatus('กำลังซิงค์ข้อมูล...', '🔄');
+            
+            const syncData = {
+                action: 'sync_all_data',
+                user_id: userId,
+                data: {
+                    transactions: transactions,
+                    categories: categories,
+                    budgets: budgets,
+                    last_sync: new Date().toISOString()
+                }
+            };
+
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(syncData));
+                    console.log('All data synced to bot:', syncData);
+                    
+                    showSyncStatus('ซิงค์ข้อมูลสำเร็จ!', '✅');
+                    hideSyncStatus();
+                } else {
+                    console.log('Telegram sendData not available, sync data:', syncData);
+                    showSyncStatus('ไม่สามารถซิงค์ได้ (ทดสอบ)', '⚠️');
+                    hideSyncStatus();
+                }
+            } catch (e) {
+                console.log('Cannot sync data to bot:', e);
+                showSyncStatus('ซิงค์ข้อมูลล้มเหลว', '❌');
+                hideSyncStatus();
+            }
+        }
+
+        // Load data from bot (when app starts)
+        function loadDataFromBot() {
+            const requestData = {
+                action: 'get_user_data',
+                user_id: userId
+            };
+
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(requestData));
+                    console.log('Requesting data from bot:', requestData);
+                } else {
+                    console.log('Telegram sendData not available, loading local data only');
+                    loadLocalData();
+                }
+            } catch (e) {
+                console.log('Cannot request data from bot, loading local data:', e);
+                loadLocalData();
+            }
+        }
+
+        // Handle data received from bot
+        function handleBotData(botData) {
+            try {
+                if (botData.transactions) {
+                    transactions = botData.transactions;
+                    localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
+                }
+                
+                if (botData.categories) {
+                    categories = botData.categories;
+                    localStorage.setItem('shiba_categories', JSON.stringify(categories));
+                }
+                
+                if (botData.budgets) {
+                    budgets = botData.budgets;
+                    localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
+                }
+
+                // Update all displays
+                updateSummary();
+                displayTransactions();
+                updateCategoryOptions();
+                displayCategories();
+                displayBudgets();
+                updateBudgetCategoryOptions();
+
+                console.log('Data loaded from bot successfully');
+            } catch (e) {
+                console.error('Error handling bot data:', e);
+                loadLocalData(); // Fallback to local data
             }
         }
 
@@ -1648,6 +1779,11 @@
             
             // Send to bot
             sendToBot(transaction);
+            
+            // Auto-sync all data to keep everything in sync
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
 
             // Hide modal
             hideAPIResultModal();
@@ -1794,6 +1930,11 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
+            // Sync to bot
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
+            
             // Clear input and refresh display
             document.getElementById('category-name-input').value = '';
             displayCategories();
@@ -1883,6 +2024,11 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
+            // Sync to bot
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
+            
             // Refresh display
             displayCategories();
             updateCategoryOptions();
@@ -1917,6 +2063,11 @@
             
             // Save to localStorage
             localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
+            
+            // Sync to bot
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
             
             // Refresh displays
             displayTransactions();
@@ -2006,21 +2157,10 @@
             // Save to localStorage
             localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
             
-            // Send to bot
-            const data = {
-                action: 'set_budget',
-                user_id: userId,
-                category: category,
-                amount: amount
-            };
-            try {
-                if (tg && typeof tg.sendData === 'function') {
-                    tg.sendData(JSON.stringify(data));
-                    console.log('Budget data sent to bot:', data);
-                }
-            } catch (e) {
-                console.log('Cannot send budget data to bot:', e);
-            }
+            // Sync all data to bot
+            setTimeout(() => {
+                syncAllDataToBot();
+            }, 500);
 
             displayBudgets();
             hideSetBudgetForm();
@@ -2360,21 +2500,28 @@
         try {
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const data = JSON.parse(decodeURIComponent(tg.initDataUnsafe.start_param));
-                if (data.transactions) {
-                    transactions = data.transactions;
-                    localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
-                }
-                if (data.categories) {
-                    categories = data.categories;
-                    localStorage.setItem('shiba_categories', JSON.stringify(categories));
-                }
-                if (data.budgets) {
-                    budgets = data.budgets;
-                    localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
-                }
+                handleBotData(data);
             }
         } catch (e) {
             console.log('No initial data provided or error parsing:', e);
+        }
+
+        // Listen for data from bot
+        try {
+            if (tg && typeof tg.onEvent === 'function') {
+                tg.onEvent('web_app_data_received', function(eventData) {
+                    try {
+                        const botData = JSON.parse(eventData.data);
+                        if (botData.action === 'send_user_data') {
+                            handleBotData(botData.data);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing bot data:', e);
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('Cannot set up bot data listener:', e);
         }
     </script>
 
@@ -2388,5 +2535,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ce9b5407cd038',t:'MTc1Mzc5NTIxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ceea6e50ed038',t:'MTc1Mzc5NTQyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
