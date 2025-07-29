@@ -829,15 +829,37 @@
         // Check if start_param exists and parse it
         function loadInitialData() {
             console.log("Attempting to load initial data...");
-            // Check if initDataUnsafe is available and has start_param
+            let encodedData = null;
+
+            // 1. Try to get start_param from Telegram.WebApp.initDataUnsafe
             if (Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param) {
-                debugStartParamStatus.textContent = "Start Param Status: Received";
+                encodedData = Telegram.WebApp.initDataUnsafe.start_param;
+                debugStartParamStatus.textContent = "Start Param Status: Received (via initDataUnsafe)";
                 debugStartParamStatus.style.color = 'green';
-                const encodedData = Telegram.WebApp.initDataUnsafe.start_param;
-                console.log("Encoded start_param:", encodedData);
-                
+                console.log("Encoded start_param (from initDataUnsafe):", encodedData);
+            } else {
+                console.log("No initial data (start_param) found in Telegram.WebApp.initDataUnsafe. Checking URL parameters directly.");
+                debugStartParamStatus.textContent = "Start Param Status: Not received (via initDataUnsafe)";
+                debugStartParamStatus.style.color = 'red';
+
+                // 2. Fallback: Try to get start_param directly from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                encodedData = urlParams.get('start_param');
+
+                if (encodedData) {
+                    debugStartParamStatus.textContent = "Start Param Status: Received (via URL)";
+                    debugStartParamStatus.style.color = 'green';
+                    console.log("Found start_param directly in URL:", encodedData);
+                } else {
+                    console.log("No initial data (start_param) found in URL either.");
+                    debugStartParamStatus.textContent = "Start Param Status: No start_param found anywhere";
+                    debugStartParamStatus.style.color = 'orange';
+                }
+            }
+
+            if (encodedData) {
                 try {
-                    // Use decodeURIComponent for URL decoding (replace + with space for proper decoding)
+                    // Replace '+' with ' ' before decoding, as decodeURIComponent doesn't handle '+' for space
                     const decodedData = decodeURIComponent(encodedData.replace(/\+/g, ' ')); 
                     console.log("Decoded data string:", decodedData);
                     
@@ -873,63 +895,21 @@
                     showPage('add-transaction-page'); 
                 }
             } else {
-                console.log("No initial data (start_param) found. Checking URL parameters directly.");
-                debugStartParamStatus.textContent = "Start Param Status: Not received (via initDataUnsafe)";
-                debugStartParamStatus.style.color = 'red';
-
-                // Fallback: Try to get start_param directly from URL if initDataUnsafe.start_param is not available
-                const urlParams = new URLSearchParams(window.location.search);
-                const directStartParam = urlParams.get('start_param');
-
-                if (directStartParam) {
-                    console.log("Found start_param directly in URL:", directStartParam);
-                    debugStartParamStatus.textContent = "Start Param Status: Received (via URL)";
-                    debugStartParamStatus.style.color = 'green';
-                    try {
-                        const decodedData = decodeURIComponent(directStartParam.replace(/\+/g, ' '));
-                        console.log("Decoded data string from URL:", decodedData);
-                        appData = JSON.parse(decodedData);
-                        console.log("Parsed appData from URL:", appData);
-
-                        debugDataParseStatus.textContent = "Data Parse Status: Success (from URL)";
-                        debugDataParseStatus.style.color = 'green';
-
-                        if (appData.categories) {
-                            userCategories = appData.categories;
-                            console.log("userCategories updated (from URL):", userCategories);
-                        } else {
-                            console.warn("appData.categories is missing or empty (from URL). Falling back to default.");
-                            userCategories = { "รายรับ": ["เงินเดือน", "อื่นๆ (รายรับ)"], "รายจ่าย": ["ค่าอาหาร", "อื่นๆ (รายจ่าย)"] };
-                        }
-                        showPage('add-transaction-page');
-                    } catch (e) {
-                        console.error("Error parsing initial data from URL:", e);
-                        showMessage("ฮือๆ เกิดข้อผิดพลาดในการโหลดข้อมูลฮับ! 😭", 'error');
-                        debugDataParseStatus.textContent = `Data Parse Status: Error (from URL: ${e.message})`;
-                        debugDataParseStatus.style.color = 'red';
-                        renderDashboard();
-                        renderSummaryAndBudgets();
-                        renderManageCategories();
-                        renderSetBudgetPage();
-                        showPage('add-transaction-page');
-                    }
-                } else {
-                    console.log("No initial data (start_param) found in URL either. Rendering default empty states.");
-                    debugDataParseStatus.textContent = "Data Parse Status: No start_param found anywhere";
-                    debugDataParseStatus.style.color = 'orange';
-                    renderDashboard();
-                    renderSummaryAndBudgets();
-                    renderManageCategories();
-                    renderSetBudgetPage();
-                    showPage('add-transaction-page');
-                }
+                console.log("No encoded data to process. Rendering default empty states.");
+                debugDataParseStatus.textContent = "Data Parse Status: No encoded data to process";
+                debugDataParseStatus.style.color = 'orange';
+                renderDashboard();
+                renderSummaryAndBudgets();
+                renderManageCategories();
+                renderSetBudgetPage();
+                showPage('add-transaction-page'); 
             }
         }
 
         // Call loadInitialData when the Telegram WebApp is ready
-        Telegram.WebApp.onEvent('viewportChanged', loadInitialData); // Use viewportChanged as a reliable trigger
-        Telegram.WebApp.onEvent('themeChanged', loadInitialData); // Also trigger on theme change for robustness
-        // Call it immediately in case events already fired or for initial load
+        // Using Telegram.WebApp.ready() as the primary trigger
+        Telegram.WebApp.onEvent('ready', loadInitialData);
+        // Also call it immediately in case 'ready' event already fired (though 'ready' is usually reliable)
         loadInitialData(); 
     </script>
 </body>
