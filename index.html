@@ -590,6 +590,92 @@
             margin: 12px auto;
             border-radius: 1px;
         }
+
+        /* Transaction Action Buttons */
+        .transaction-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .edit-btn {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        /* Category Item Styles */
+        .category-item {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .category-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-item.income {
+            border-left-color: #28a745;
+        }
+
+        .category-item.expense {
+            border-left-color: #dc3545;
+        }
+
+        .category-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .category-type-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .category-type-badge.income {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .category-type-badge.expense {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -599,8 +685,9 @@
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('history')">📜 ดูประวัติ</div>
-        <div class="tab" onclick="switchTab('summary')">📊 สรุปเงิน</div>
+        <div class="tab active" onclick="switchTab('summary')">🏠 หน้าหลัก</div>
+        <div class="tab" onclick="switchTab('history')">📜 ประวัติ</div>
+        <div class="tab" onclick="switchTab('categories')">🏷️ หมวดหมู่</div>
         <div class="tab" onclick="switchTab('budget')">🎯 งบประมาณ</div>
         <div class="tab" onclick="switchTab('reports')">📈 รายงาน</div>
     </div>
@@ -702,15 +789,8 @@
         </div>
     </div>
 
-    <!-- History Tab -->
-    <div id="history-content" class="content active">
-        <div id="transactions-list">
-            <div class="loading">กำลังโหลด...</div>
-        </div>
-    </div>
-
-    <!-- Summary Tab -->
-    <div id="summary-content" class="content">
+    <!-- Summary Tab (Now Home) -->
+    <div id="summary-content" class="content active">
         <div class="summary-card">
             <div class="summary-item">
                 <div class="summary-label">ยอดคงเหลือ</div>
@@ -728,8 +808,47 @@
                 <div class="summary-value" id="total-expense">฿0.00</div>
             </div>
         </div>
+    </div>
 
+    <!-- History Tab -->
+    <div id="history-content" class="content">
+        <div id="transactions-list">
+            <div class="loading">กำลังโหลด...</div>
+        </div>
+    </div>
 
+    <!-- Categories Management Tab -->
+    <div id="categories-content" class="content">
+        <div style="margin-bottom: 24px;">
+            <h3 style="margin-bottom: 16px; color: #FF8C42;">🏷️ จัดการหมวดหมู่</h3>
+            
+            <!-- Add New Category Section -->
+            <div style="background: rgba(255, 140, 66, 0.05); border: 2px dashed #FF8C42; border-radius: 16px; padding: 20px; margin-bottom: 24px;">
+                <div style="font-weight: 600; margin-bottom: 12px; color: #FF8C42;">➕ เพิ่มหมวดหมู่ใหม่</div>
+                
+                <div class="form-group">
+                    <label>ประเภท</label>
+                    <div class="tab-container">
+                        <div class="tab active" onclick="setCategoryType('รายรับ')">💚 รายรับ</div>
+                        <div class="tab" onclick="setCategoryType('รายจ่าย')">💸 รายจ่าย</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>ชื่อหมวดหมู่</label>
+                    <input type="text" id="category-name-input" placeholder="เช่น: ค่าขนม, รายได้จากขาย...">
+                </div>
+                
+                <button class="btn btn-primary" onclick="addCategoryFromManagement()">
+                    ✅ เพิ่มหมวดหมู่
+                </button>
+            </div>
+            
+            <!-- Categories List -->
+            <div id="categories-list">
+                <div class="loading">กำลังโหลดหมวดหมู่...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Budget Tab -->
@@ -895,10 +1014,12 @@
             document.getElementById(tabName + '-content').classList.add('active');
 
             // Load data for specific tabs
-            if (tabName === 'history') {
-                loadTransactions();
-            } else if (tabName === 'summary') {
+            if (tabName === 'summary') {
                 updateSummary();
+            } else if (tabName === 'history') {
+                loadTransactions();
+            } else if (tabName === 'categories') {
+                displayCategories();
             } else if (tabName === 'budget') {
                 displayBudgets();
             } else if (tabName === 'reports') {
@@ -908,8 +1029,9 @@
 
         function getTabText(tabName) {
             const tabTexts = {
-                'history': '📜 ดูประวัติ',
-                'summary': '📊 สรุปเงิน',
+                'summary': '🏠 หน้าหลัก',
+                'history': '📜 ประวัติ',
+                'categories': '🏷️ หมวดหมู่',
                 'budget': '🎯 งบประมาณ',
                 'reports': '📈 รายงาน'
             };
@@ -1251,13 +1373,13 @@
             }
 
             const transaction = {
-                id: Date.now(),
-                type: currentTransactionType,
+                user_id: userId,
                 amount: amount,
+                type: currentTransactionType,
                 category: category,
-                description: description,
-                date: date,
-                timestamp: new Date().toISOString()
+                detail: description,
+                date: new Date(date).toISOString(),
+                ref_id: null
             };
 
             try {
@@ -1738,15 +1860,13 @@
             }
 
             const transaction = {
-                id: Date.now(),
-                type: window.currentApiTransactionType,
+                user_id: userId,
                 amount: window.currentApiResponse.amount || 0,
+                type: window.currentApiTransactionType,
                 category: category,
-                description: description,
-                date: transactionDate,
-                timestamp: new Date().toISOString(),
-                source: 'ocr_api',
-                reference: window.currentApiResponse.reference_no || null
+                detail: description,
+                date: new Date(transactionDate).toISOString(),
+                ref_id: window.currentApiResponse.reference_no || null
             };
 
             try {
@@ -1827,7 +1947,17 @@
                         <span class="transaction-category">${transaction.category}</span>
                     </div>
                     <div class="transaction-date">${formatDate(transaction.date)}</div>
-                    ${transaction.description ? `<div style="margin-top: 8px; font-size: 14px; opacity: 0.8;">${transaction.description}</div>` : ''}
+                    ${transaction.detail ? `<div style="margin-top: 8px; font-size: 14px; opacity: 0.8;">${transaction.detail}</div>` : ''}
+                    ${transaction.ref_id ? `<div style="margin-top: 4px; font-size: 12px; opacity: 0.6;">อ้างอิง: ${transaction.ref_id}</div>` : ''}
+                    
+                    <div class="transaction-actions">
+                        <button class="action-btn edit-btn" onclick="editTransaction('${transaction._id || transaction.id}')">
+                            ✏️ แก้ไข
+                        </button>
+                        <button class="action-btn delete-btn" onclick="deleteTransaction('${transaction._id || transaction.id}')">
+                            🗑️ ลบ
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -1884,6 +2014,286 @@
                 hideAddTransactionModal();
             }
         });
+
+        // Category management functions
+        let currentCategoryType = 'รายรับ';
+
+        function setCategoryType(type) {
+            currentCategoryType = type;
+            
+            // Update tab appearance
+            const tabs = document.querySelectorAll('#categories-content .tab-container .tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function addCategoryFromManagement() {
+            const categoryName = document.getElementById('category-name-input').value.trim();
+            
+            if (!categoryName) {
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
+                } else {
+                    alert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
+                }
+                return;
+            }
+
+            // Check if category already exists
+            if (categories[currentCategoryType].includes(categoryName)) {
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
+                } else {
+                    alert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
+                }
+                return;
+            }
+
+            try {
+                // Add to local categories
+                categories[currentCategoryType].push(categoryName);
+                
+                // Save to MongoDB
+                const response = await fetch(`${API_BASE_URL}/users/categories`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        categories: categories
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Save to localStorage as backup
+                localStorage.setItem('shiba_categories', JSON.stringify(categories));
+                
+                // Clear input and refresh display
+                document.getElementById('category-name-input').value = '';
+                displayCategories();
+                updateCategoryOptions();
+                updateBudgetCategoryOptions();
+                
+                // Show success message
+                if (tg && tg.showAlert) {
+                    tg.showAlert(`🎉 เย้! เพิ่มหมวดหมู่ "${categoryName}" เรียบร้อยแล้วครับ! 🐾`);
+                } else {
+                    alert(`🎉 เย้! เพิ่มหมวดหมู่ "${categoryName}" เรียบร้อยแล้วครับ! 🐾`);
+                }
+
+            } catch (error) {
+                console.error('Error adding category:', error);
+                
+                // Remove from local categories if API failed
+                const index = categories[currentCategoryType].indexOf(categoryName);
+                if (index > -1) {
+                    categories[currentCategoryType].splice(index, 1);
+                }
+                
+                if (tg && tg.showAlert) {
+                    tg.showAlert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
+                } else {
+                    alert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
+                }
+            }
+        }
+
+        function displayCategories() {
+            const container = document.getElementById('categories-list');
+            
+            let categoriesHtml = '';
+            
+            // Display income categories
+            if (categories['รายรับ'] && categories['รายรับ'].length > 0) {
+                categoriesHtml += `
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="color: #28a745; margin-bottom: 12px;">💚 หมวดหมู่รายรับ</h4>
+                        ${categories['รายรับ'].map(category => `
+                            <div class="category-item income">
+                                <div class="category-info">
+                                    <div class="category-type-badge income">รายรับ</div>
+                                    <div style="font-weight: 600;">${category}</div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="action-btn delete-btn" onclick="deleteCategory('รายรับ', '${category}')">
+                                        🗑️ ลบ
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Display expense categories
+            if (categories['รายจ่าย'] && categories['รายจ่าย'].length > 0) {
+                categoriesHtml += `
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="color: #dc3545; margin-bottom: 12px;">💸 หมวดหมู่รายจ่าย</h4>
+                        ${categories['รายจ่าย'].map(category => `
+                            <div class="category-item expense">
+                                <div class="category-info">
+                                    <div class="category-type-badge expense">รายจ่าย</div>
+                                    <div style="font-weight: 600;">${category}</div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="action-btn delete-btn" onclick="deleteCategory('รายจ่าย', '${category}')">
+                                        🗑️ ลบ
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (!categoriesHtml) {
+                categoriesHtml = '<div class="empty-state">ยังไม่มีหมวดหมู่<br>เริ่มเพิ่มหมวดหมู่แรกของคุณ!</div>';
+            }
+            
+            container.innerHTML = categoriesHtml;
+        }
+
+        async function deleteCategory(type, categoryName) {
+            // Check if category is being used in transactions
+            const isUsed = transactions.some(t => t.category === categoryName);
+            
+            if (isUsed) {
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🚫 ไม่สามารถลบหมวดหมู่นี้ได้ เพราะมีการใช้งานในรายการแล้ว!');
+                } else {
+                    alert('🚫 ไม่สามารถลบหมวดหมู่นี้ได้ เพราะมีการใช้งานในรายการแล้ว!');
+                }
+                return;
+            }
+
+            // Confirm deletion
+            const confirmDelete = confirm(`🗑️ ต้องการลบหมวดหมู่ "${categoryName}" ใช่หรือไม่?`);
+            if (!confirmDelete) return;
+
+            try {
+                // Remove from local categories
+                const index = categories[type].indexOf(categoryName);
+                if (index > -1) {
+                    categories[type].splice(index, 1);
+                }
+                
+                // Save to MongoDB
+                const response = await fetch(`${API_BASE_URL}/users/categories`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        categories: categories
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Save to localStorage as backup
+                localStorage.setItem('shiba_categories', JSON.stringify(categories));
+                
+                // Refresh display
+                displayCategories();
+                updateCategoryOptions();
+                updateBudgetCategoryOptions();
+                
+                // Show success message
+                if (tg && tg.showAlert) {
+                    tg.showAlert(`✅ ลบหมวดหมู่ "${categoryName}" เรียบร้อยแล้ว!`);
+                } else {
+                    alert(`✅ ลบหมวดหมู่ "${categoryName}" เรียบร้อยแล้ว!`);
+                }
+
+            } catch (error) {
+                console.error('Error deleting category:', error);
+                
+                // Restore category if API failed
+                categories[type].push(categoryName);
+                
+                if (tg && tg.showAlert) {
+                    tg.showAlert('😅 น้องชิบะลบหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
+                } else {
+                    alert('😅 น้องชิบะลบหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
+                }
+            }
+        }
+
+        // Transaction edit/delete functions
+        async function editTransaction(transactionId) {
+            const transaction = transactions.find(t => (t._id || t.id) == transactionId);
+            if (!transaction) return;
+
+            // Show edit modal (you can implement this similar to add transaction modal)
+            if (tg && tg.showAlert) {
+                tg.showAlert('🚧 ฟีเจอร์แก้ไขกำลังพัฒนา! จะมาเร็วๆ นี้ครับ! 🐾');
+            } else {
+                alert('🚧 ฟีเจอร์แก้ไขกำลังพัฒนา! จะมาเร็วๆ นี้ครับ! 🐾');
+            }
+        }
+
+        async function deleteTransaction(transactionId) {
+            const transaction = transactions.find(t => (t._id || t.id) == transactionId);
+            if (!transaction) return;
+
+            // Confirm deletion
+            const confirmDelete = confirm(`🗑️ ต้องการลบรายการ "${transaction.category}" จำนวน ฿${transaction.amount.toLocaleString()} ใช่หรือไม่?`);
+            if (!confirmDelete) return;
+
+            try {
+                // Delete from MongoDB
+                const response = await fetch(`${API_BASE_URL}/transactions/${transactionId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Remove from local array
+                const index = transactions.findIndex(t => (t._id || t.id) == transactionId);
+                if (index > -1) {
+                    transactions.splice(index, 1);
+                }
+                
+                // Save to localStorage as backup
+                localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
+                
+                // Refresh displays
+                displayTransactions();
+                updateSummary();
+                
+                // Show success message
+                if (tg && tg.showAlert) {
+                    tg.showAlert('✅ ลบรายการเรียบร้อยแล้ว!');
+                } else {
+                    alert('✅ ลบรายการเรียบร้อยแล้ว!');
+                }
+
+            } catch (error) {
+                console.error('Error deleting transaction:', error);
+                
+                if (tg && tg.showAlert) {
+                    tg.showAlert('😅 น้องชิบะลบรายการไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
+                } else {
+                    alert('😅 น้องชิบะลบรายการไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
+                }
+            }
+        }
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', init);
@@ -2341,5 +2751,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c521275f926c9',t:'MTc1Mzc4OTAwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c6ac3a57dd338',t:'MTc1Mzc5MDAxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
