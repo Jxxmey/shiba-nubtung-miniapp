@@ -426,10 +426,17 @@
     <script>
         // Initialize Telegram WebApp
         Telegram.WebApp.ready();
+        Telegram.WebApp.expand(); // Expand the Mini App to full height
 
         const messageBox = document.getElementById('messageBox');
         
-        // Elements for Add Transaction Page
+        // Global variables to store data from the bot
+        let appData = {}; 
+        let userCategories = { "รายรับ": [], "รายจ่าย": [] };
+        let selectedTransactionType = 'income'; // Default selected type for transaction form
+        let selectedNewCategoryType = 'income'; // Default for add category form
+
+        // Elements for Add Transaction Page (Dashboard)
         const monthlyIncomeElemAddPage = document.getElementById('current-income-add-page');
         const monthlyExpenseElemAddPage = document.getElementById('current-expense-add-page');
         const monthlyBalanceElemAddPage = document.getElementById('current-balance-add-page');
@@ -453,7 +460,7 @@
         const newCatTypeExpenseBtn = document.getElementById('newCatTypeExpense');
         const incomeCategoriesList = document.getElementById('income-categories-list');
         const expenseCategoriesList = document.getElementById('expense-categories-list');
-        let selectedNewCategoryType = 'income'; // Default for add category form
+        
 
         // Elements for Set Budget Page
         const setBudgetForm = document.getElementById('setBudgetForm');
@@ -466,10 +473,6 @@
         const pages = document.querySelectorAll('.page');
         const topNavButtons = document.querySelectorAll('.top-nav-button');
 
-        let allCategories = { "รายรับ": [], "รายจ่าย": [] };
-        let allBudgets = {};
-        let selectedTransactionType = 'income'; // Default selected type for transaction form
-
         // Function to show/hide pages and update active nav button
         function showPage(pageId) {
             pages.forEach(page => page.classList.remove('active'));
@@ -480,24 +483,26 @@
             
             // Logic to populate dropdowns/lists when navigating to specific pages
             if (pageId === 'add-transaction-page') {
+                renderDashboard();
                 populateCategories(selectedTransactionType);
             } else if (pageId === 'summary-budget-page') {
-                renderCurrentBudgets(allBudgets, allCategories['รายจ่าย']);
+                renderSummaryAndBudgets();
             } else if (pageId === 'manage-categories-page') {
-                renderCategoryLists(allCategories);
+                renderManageCategories();
                 // Reset add category form type buttons
                 newCatTypeIncomeBtn.classList.add('selected');
                 newCatTypeExpenseBtn.classList.remove('selected');
                 selectedNewCategoryType = 'income';
+                newCategoryNameInput.value = ''; // Clear input field
             } else if (pageId === 'set-budget-page') {
-                populateBudgetCategorySelect(allCategories['รายจ่าย']);
-                renderSetBudgetsList(allBudgets, allCategories['รายจ่าย']);
+                renderSetBudgetPage();
+                budgetAmountInput.value = ''; // Clear input field
             }
             // Adjust WebApp viewport
             Telegram.WebApp.viewportChanged();
         }
 
-        // Function to show messages
+        // Function to show messages (similar to Telegram.WebApp.showAlert but in-app)
         function showMessage(message, type = 'info') {
             messageBox.innerText = message;
             messageBox.className = `message-box ${type}`;
@@ -507,37 +512,167 @@
             }, 5000); // Hide after 5 seconds
         }
 
-        // Function to render recent transactions
-        function renderRecentTransactions(transactions) {
-            recentTransactionsDiv.innerHTML = ''; // Clear previous transactions
-            if (transactions.length === 0) {
-                recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีรายการบันทึกเลยฮับ! 😔</p>';
-                return;
-            }
-            transactions.forEach(t => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'transaction-item';
-                const typeEmoji = t.type === 'income' ? '➕' : '➖';
-                const amountColorClass = t.type === 'income' ? 'text-green-600' : 'text-red-600';
-                const formattedAmount = t.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const detailText = t.detail && t.detail !== 'ไม่มีรายละเอียด' ? ` (${t.detail})` : '';
-                const transactionDate = new Date(t.date);
-                const timeString = transactionDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        // --- Render functions for each page/section ---
 
-                itemDiv.innerHTML = `
-                    <span class="${amountColorClass} mr-2">${typeEmoji}</span>
-                    <span class="transaction-detail-col">${t.category}${detailText}</span>
-                    <span class="text-gray-500 text-xs mr-2">${timeString}</span>
-                    <span class="transaction-amount-col ${amountColorClass}">${formattedAmount} บาท</span>
-                `;
-                recentTransactionsDiv.appendChild(itemDiv);
-            });
+        // Renders data for the "บันทึกรายการ" (Add Transaction) page
+        function renderDashboard() {
+            // Update summary section
+            if (appData.summary) {
+                monthlyBalanceElemAddPage.textContent = `${appData.summary.balance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                if (appData.summary.balance < 0) {
+                    monthlyBalanceElemAddPage.classList.add('expense-value'); // Use red for negative balance
+                    monthlyBalanceElemAddPage.classList.remove('balance-value');
+                } else {
+                    monthlyBalanceElemAddPage.classList.remove('expense-value');
+                    monthlyBalanceElemAddPage.classList.add('balance-value');
+                }
+                monthlyIncomeElemAddPage.textContent = `${appData.summary.income.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                monthlyExpenseElemAddPage.textContent = `${appData.summary.expense.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+            } else {
+                monthlyBalanceElemAddPage.textContent = '0.00 บาท';
+                monthlyIncomeElemAddPage.textContent = '0.00 บาท';
+                monthlyExpenseElemAddPage.textContent = '0.00 บาท';
+            }
+
+            // Render recent transactions
+            recentTransactionsDiv.innerHTML = ''; // Clear previous transactions
+            if (appData.recent_transactions && appData.recent_transactions.length > 0) {
+                appData.recent_transactions.forEach(t => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'transaction-item';
+                    const typeEmoji = t.type === 'income' ? '➕' : '➖';
+                    const amountColorClass = t.type === 'income' ? 'income-value' : 'expense-value';
+                    const formattedAmount = t.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const detailText = t.detail && t.detail !== 'ไม่มีรายละเอียด' ? ` (${t.detail})` : '';
+                    const transactionDate = new Date(t.date); // Convert ISO string back to Date object
+                    const timeString = transactionDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                    itemDiv.innerHTML = `
+                        <span class="${amountColorClass} mr-2">${typeEmoji}</span>
+                        <span class="transaction-detail-col">${t.category}${detailText}</span>
+                        <span class="text-gray-500 text-xs mr-2">${timeString}</span>
+                        <span class="transaction-amount-col ${amountColorClass}">${formattedAmount} บาท</span>
+                    `;
+                    recentTransactionsDiv.appendChild(itemDiv);
+                });
+            } else {
+                recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีรายการบันทึกเลยฮับ! 😔</p>';
+            }
         }
 
-        // Function to populate categories dropdown for transaction form
-        function populateCategories(selectedType) {
+        // Renders data for the "สรุป & งบประมาณ" (Summary & Budget) page
+        function renderSummaryAndBudgets() {
+            // Monthly Summary
+            if (appData.summary) {
+                monthlyIncomeSummaryPage.textContent = `${appData.summary.income.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                monthlyExpenseSummaryPage.textContent = `${appData.summary.expense.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                monthlyBalanceSummaryPage.textContent = `${appData.summary.balance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+                if (appData.summary.balance < 0) {
+                    monthlyBalanceSummaryPage.classList.add('expense-value');
+                    monthlyBalanceSummaryPage.classList.remove('balance-value');
+                } else {
+                    monthlyBalanceSummaryPage.classList.remove('expense-value');
+                    monthlyBalanceSummaryPage.classList.add('balance-value');
+                }
+            } else {
+                monthlyIncomeSummaryPage.textContent = '0.00 บาท';
+                monthlyExpenseSummaryPage.textContent = '0.00 บาท';
+                monthlyBalanceSummaryPage.textContent = '0.00 บาท';
+            }
+
+            // Current Budgets
+            currentBudgetsDiv.innerHTML = '';
+            if (appData.budgets && Object.keys(appData.budgets).length > 0) {
+                // To display "spent" and "remaining", we need to calculate it here
+                // For now, appData.budgets only has the limit.
+                // A more complete solution would require the bot to send `expense_by_category` for the current month.
+                // For this example, we'll just show the budget limit.
+                for (const category in appData.budgets) {
+                    const budgetAmount = appData.budgets[category];
+                    const budgetItemDiv = document.createElement('div');
+                    budgetItemDiv.className = 'budget-item';
+                    budgetItemDiv.innerHTML = `
+                        <span class="category-name-col font-medium">${category}:</span>
+                        <span class="budget-amount-col">${budgetAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
+                    `;
+                    currentBudgetsDiv.appendChild(budgetItemDiv);
+                }
+            } else {
+                currentBudgetsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีงบประมาณที่ตั้งไว้เลยฮับ! 😟</p>';
+            }
+        }
+
+        // Renders data for the "จัดการหมวดหมู่" (Manage Categories) page
+        function renderManageCategories() {
+            incomeCategoriesList.innerHTML = '';
+            expenseCategoriesList.innerHTML = '';
+
+            if (userCategories["รายรับ"].length === 0) {
+                incomeCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายรับ</p>';
+            } else {
+                userCategories["รายรับ"].forEach(cat => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'category-item';
+                    itemDiv.innerHTML = `<span class="category-name-col">${cat}</span>`;
+                    incomeCategoriesList.appendChild(itemDiv);
+                });
+            }
+
+            if (userCategories["รายจ่าย"].length === 0) {
+                expenseCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายจ่าย</p>';
+            } else {
+                userCategories["รายจ่าย"].forEach(cat => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'category-item';
+                    itemDiv.innerHTML = `<span class="category-name-col">${cat}</span>`;
+                    expenseCategoriesList.appendChild(itemDiv);
+                });
+            }
+        }
+
+        // Renders data for the "ตั้งงบประมาณ" (Set Budget) page
+        function renderSetBudgetPage() {
+            // Populate budget category select with expense categories
+            budgetCategorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>';
+            const expenseCategories = userCategories['รายจ่าย'];
+            if (expenseCategories && expenseCategories.length > 0) {
+                expenseCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    budgetCategorySelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'ไม่มีหมวดหมู่รายจ่าย';
+                budgetCategorySelect.appendChild(option);
+            }
+
+            // Display current set budgets in this section (similar to currentBudgetsDiv but specific to this page)
+            setBudgetsList.innerHTML = '';
+            if (appData.budgets && Object.keys(appData.budgets).length > 0) {
+                for (const category in appData.budgets) {
+                    const budgetAmount = appData.budgets[category];
+                    const budgetItemDiv = document.createElement('div');
+                    budgetItemDiv.className = 'budget-item';
+                    budgetItemDiv.innerHTML = `
+                        <span class="category-name-col font-medium">${category}:</span>
+                        <span class="budget-amount-col">${budgetAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
+                    `;
+                    setBudgetsList.appendChild(budgetItemDiv);
+                }
+            } else {
+                setBudgetsList.innerHTML = '<p class="text-gray-500">ยังไม่มีงบประมาณที่ตั้งไว้เลยฮับ! 😟</p>';
+            }
+        }
+
+        // --- Event Handlers for Forms ---
+
+        // Function to populate categories dropdown for transaction form based on selected type
+        function populateCategories(type) {
             categorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>'; // Reset
-            const categories = allCategories[selectedType === 'income' ? 'รายรับ' : 'รายจ่าย'];
+            const categories = userCategories[type === 'income' ? 'รายรับ' : 'รายจ่าย'];
             categories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
@@ -546,7 +681,7 @@
             });
         }
 
-        // Handle type button clicks for transaction form
+        // Handle type button clicks for transaction form (income/expense)
         typeButtons.forEach(button => {
             button.addEventListener('click', (event) => {
                 typeButtons.forEach(btn => btn.classList.remove('selected'));
@@ -556,81 +691,42 @@
             });
         });
 
-        // --- Functions for Summary & Budget Page ---
-        function renderCurrentBudgets(budgets, expenseCategories) {
-            currentBudgetsDiv.innerHTML = ''; // Clear previous budgets
-            if (Object.keys(budgets).length === 0) {
-                currentBudgetsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีงบประมาณที่ตั้งไว้เลยฮับ! 😟</p>';
+        // Handle transaction form submission
+        transactionForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const amount = parseFloat(amountInput.value);
+            const detail = detailInput.value.trim();
+            const category = categorySelect.value;
+
+            if (!category) {
+                showMessage('โปรดเลือกหมวดหมู่ด้วยนะฮับ! 🥺', 'error');
+                return;
+            }
+            if (isNaN(amount) || amount <= 0) {
+                showMessage('โปรดระบุจำนวนเงินที่ถูกต้อง (มากกว่า 0) ด้วยนะฮับ! 🥺', 'error');
                 return;
             }
 
-            // Get total expense for each category for the current month
-            const currentMonth = new Date();
-            const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-            const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999);
-
-            // This part would ideally fetch real-time spending from the bot.
-            // For now, we'll simulate or use the data passed from the bot if available.
-            // The bot's `open_mini_app` already calculates monthly summary,
-            // but not spending per category for budget tracking.
-            // A full implementation would require a new bot endpoint to get `expense_by_category`
-            // or pass it in the initial `start_param`.
-            // For now, we'll just display the budget limits.
-            
-            // To make it fully functional, we'd need to fetch monthly spending per category.
-            // For this example, we'll just show the budget limit.
-            // If the `start_param` included `expense_by_category`, we would use it here.
-            const dummyExpenseByCategory = {}; // Placeholder
-
-            for (const category of expenseCategories) {
-                if (budgets[category]) {
-                    const budgetAmount = budgets[category];
-                    const spentAmount = dummyExpenseByCategory[category] || 0; // Replace with actual spent if available
-                    const remaining = budgetAmount - spentAmount;
-                    const statusEmoji = remaining >= 0 ? '✅' : '❌';
-                    const statusColor = remaining >= 0 ? 'text-green-600' : 'text-red-600';
-
-                    const budgetItemDiv = document.createElement('div');
-                    budgetItemDiv.className = 'budget-item';
-                    budgetItemDiv.innerHTML = `
-                        <span class="category-name-col font-medium">${category}:</span>
-                        <span class="budget-amount-col">งบ: ${budgetAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
-                        <span class="budget-amount-col ${statusColor}">ใช้ไป: ${spentAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
-                        <span class="budget-amount-col ${statusColor}">เหลือ: ${remaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท ${statusEmoji}</span>
-                    `;
-                    currentBudgetsDiv.appendChild(budgetItemDiv);
+            const transaction = {
+                action: 'add_transaction',
+                payload: {
+                    type: selectedTransactionType,
+                    category: category,
+                    amount: amount,
+                    detail: detail || 'ไม่มีรายละเอียด', // Default detail if empty
+                    date: new Date().toISOString() // Send current date as ISO string
                 }
+            };
+            try {
+                Telegram.WebApp.sendData(JSON.stringify(transaction));
+                showMessage('บันทึกรายการเรียบร้อยแล้วฮับ! ✨ (Mini App จะปิดในสักครู่)', 'success');
+                transactionForm.reset();
+                Telegram.WebApp.close(); // Close the Mini App after sending data
+            } catch (e) {
+                console.error("Error sending transaction data to bot:", e);
+                showMessage("ฮือๆ ส่งข้อมูลรายการไม่สำเร็จฮับ! 😭", 'error');
             }
-        }
-
-
-        // --- Functions for Manage Categories Page ---
-        function renderCategoryLists(categories) {
-            incomeCategoriesList.innerHTML = '';
-            expenseCategoriesList.innerHTML = '';
-
-            if (categories["รายรับ"].length === 0) {
-                incomeCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายรับ</p>';
-            } else {
-                categories["รายรับ"].forEach(cat => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'category-item';
-                    itemDiv.innerHTML = `<span class="category-name-col">${cat}</span>`;
-                    incomeCategoriesList.appendChild(itemDiv);
-                });
-            }
-
-            if (categories["รายจ่าย"].length === 0) {
-                expenseCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายจ่าย</p>';
-            } else {
-                categories["รายจ่าย"].forEach(cat => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'category-item';
-                    itemDiv.innerHTML = `<span class="category-name-col">${cat}</span>`;
-                    expenseCategoriesList.appendChild(itemDiv);
-                });
-            }
-        }
+        });
 
         // Handle type button clicks for add category form
         newCatTypeIncomeBtn.addEventListener('click', () => {
@@ -664,47 +760,14 @@
 
             try {
                 Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                showMessage(`ส่งข้อมูลเพิ่มหมวดหมู่ '${newCategoryName}' แล้วฮับ! ✨ (โปรดเปิด Mini App ใหม่เพื่อดูการเปลี่ยนแปลง)`, 'success');
+                showMessage(`ส่งข้อมูลเพิ่มหมวดหมู่ '${newCategoryName}' แล้วฮับ! ✨ (Mini App จะปิดในสักครู่)`, 'success');
                 addCategoryForm.reset();
-                // No immediate update, user needs to re-open
+                Telegram.WebApp.close(); // Close the Mini App after sending data
             } catch (e) {
                 console.error("Error sending add category data to bot:", e);
                 showMessage("ฮือๆ ส่งข้อมูลเพิ่มหมวดหมู่ไม่สำเร็จฮับ! 😭", 'error');
             }
         });
-
-
-        // --- Functions for Set Budget Page ---
-        function populateBudgetCategorySelect(expenseCategories) {
-            budgetCategorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>';
-            expenseCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat;
-                option.innerText = cat;
-                budgetCategorySelect.appendChild(option);
-            });
-        }
-
-        function renderSetBudgetsList(budgets, expenseCategories) {
-            setBudgetsList.innerHTML = '';
-            if (Object.keys(budgets).length === 0) {
-                setBudgetsList.innerHTML = '<p class="text-gray-500">ยังไม่มีงบประมาณที่ตั้งไว้เลยฮับ! 😟</p>';
-                return;
-            }
-
-            for (const category of expenseCategories) {
-                if (budgets[category]) {
-                    const budgetAmount = budgets[category];
-                    const budgetItemDiv = document.createElement('div');
-                    budgetItemDiv.className = 'budget-item';
-                    budgetItemDiv.innerHTML = `
-                        <span class="category-name-col font-medium">${category}:</span>
-                        <span class="budget-amount-col">${budgetAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
-                    `;
-                    setBudgetsList.appendChild(budgetItemDiv);
-                }
-            }
-        }
 
         // Handle Set Budget Form Submission
         setBudgetForm.addEventListener('submit', (event) => {
@@ -713,104 +776,71 @@
             const amount = parseFloat(budgetAmountInput.value);
 
             if (!category) {
-                showMessage("โปรดเลือกหมวดหมู่ด้วยนะฮับ! 📝", 'error');
+                showMessage('โปรดเลือกหมวดหมู่ด้วยนะฮับ! 🥺', 'error');
                 return;
             }
-            if (isNaN(amount) || amount < 0) { // Allow 0 to remove budget
-                showMessage("โปรดระบุจำนวนงบประมาณที่ถูกต้องนะฮับ! (ต้องเป็นตัวเลข >= 0) 🥺", 'error');
+            if (isNaN(amount) || amount <= 0) {
+                showMessage('โปรดระบุจำนวนงบประมาณที่ถูกต้อง (มากกว่า 0) ด้วยนะฮับ! 🥺', 'error');
                 return;
             }
 
-            const dataToSend = {
+            const budgetData = {
                 action: 'set_budget',
                 payload: {
                     category: category,
                     amount: amount
                 }
             };
-
             try {
-                Telegram.WebApp.sendData(JSON.stringify(dataToSend));
-                showMessage(`ส่งข้อมูลตั้งงบประมาณสำหรับ '${category}' แล้วฮับ! ✨ (โปรดเปิด Mini App ใหม่เพื่อดูการเปลี่ยนแปลง)`, 'success');
+                Telegram.WebApp.sendData(JSON.stringify(budgetData));
+                showMessage(`ตั้งงบประมาณสำหรับ '${category}' เรียบร้อยแล้วฮับ! ✨ (Mini App จะปิดในสักครู่)`, 'success');
                 setBudgetForm.reset();
-                populateBudgetCategorySelect(allCategories['รายจ่าย']); // Reset dropdown
-                // No immediate update, user needs to re-open
+                Telegram.WebApp.close(); // Close the Mini App after sending data
             } catch (e) {
                 console.error("Error sending set budget data to bot:", e);
-                showMessage("ฮือๆ ส่งข้อมูลตั้งงบประมาณไม่สำเร็จฮับ! 😭", 'error');
+                showMessage("ฮือๆ ส่งข้อมูลงบประมาณไม่สำเร็จฮับ! 😭", 'error');
             }
         });
 
 
-        // --- Initial Data Loading ---
+        // --- Initial Load Logic ---
+        // Check if start_param exists and parse it
         if (Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param) {
             try {
-                const decodedData = decodeURIComponent(Telegram.WebApp.initDataUnsafe.start_param);
-                const initialData = JSON.parse(decodedData);
-                console.log("Initial Data:", initialData);
+                const encodedData = Telegram.WebApp.initDataUnsafe.start_param;
+                // Use decodeURIComponent for URL decoding (replace + with space for proper decoding)
+                const decodedData = decodeURIComponent(encodedData.replace(/\+/g, ' ')); 
+                appData = JSON.parse(decodedData);
+                console.log("Initial data loaded:", appData); // Log to console for debugging
 
-                // Update summary on Add Transaction Page
-                if (initialData.summary) {
-                    monthlyIncomeElemAddPage.innerText = `${initialData.summary.income.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
-                    monthlyExpenseElemAddPage.innerText = `${initialData.summary.expense.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
-                    monthlyBalanceElemAddPage.innerText = `${initialData.summary.balance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
-                    
-                    // Update summary on Summary & Budget Page
-                    monthlyIncomeSummaryPage.innerText = monthlyIncomeElemAddPage.innerText;
-                    monthlyExpenseSummaryPage.innerText = monthlyExpenseElemAddPage.innerText;
-                    monthlyBalanceSummaryPage.innerText = monthlyBalanceElemAddPage.innerText;
+                // Update global categories
+                if (appData.categories) {
+                    userCategories = appData.categories;
                 }
 
-                // Render recent transactions
-                if (initialData.recent_transactions) {
-                    renderRecentTransactions(initialData.recent_transactions);
-                }
-
-                // Store and populate categories
-                if (initialData.categories) {
-                    allCategories = initialData.categories;
-                    // Ensure the correct type button is selected visually for transaction form
-                    typeButtons.forEach(btn => {
-                        if (btn.dataset.type === selectedTransactionType) {
-                            btn.classList.add('selected');
-                        } else {
-                            btn.classList.remove('selected');
-                        }
-                    });
-                    populateCategories(selectedTransactionType);
-                }
-
-                // Store and render budgets
-                if (initialData.budgets) {
-                    allBudgets = initialData.budgets;
-                    // Budgets will be rendered when navigating to Summary & Budget or Set Budget page
-                    // No need to call render functions here, as showPage will handle it.
-                }
+                // Initial rendering of the active page
+                showPage('add-transaction-page'); 
 
             } catch (e) {
-                console.error("Error parsing start_param:", e);
-                showMessage("ฮือๆ เกิดข้อผิดพลาดในการโหลดข้อมูลเริ่มต้นฮับ! 😭", 'error');
-                // Fallback to empty state if parsing fails
-                monthlyIncomeElemAddPage.innerText = '0.00 บาท';
-                monthlyExpenseElemAddPage.innerText = '0.00 บาท';
-                monthlyBalanceElemAddPage.innerText = '0.00 บาท';
-                recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ไม่สามารถโหลดรายการได้ฮับ 😔</p>';
-                currentBudgetsDiv.innerHTML = '<p class="text-gray-500">ไม่สามารถโหลดงบประมาณได้ฮับ 😔</p>';
-                incomeCategoriesList.innerHTML = '<p class="text-gray-500">ไม่สามารถโหลดหมวดหมู่ได้ฮับ 😔</p>';
-                expenseCategoriesList.innerHTML = '<p class="text-gray-500">ไม่สามารถโหลดหมวดหมู่ได้ฮับ 😔</p>';
-                setBudgetsList.innerHTML = '<p class="text-gray-500">ไม่สามารถโหลดงบประมาณได้ฮับ 😔</p>';
+                console.error("Error parsing initial data:", e);
+                showMessage("ฮือๆ เกิดข้อผิดพลาดในการโหลดข้อมูลฮับ! 😭", 'error');
+                // Fallback to render empty states if data parsing fails
+                renderDashboard();
+                renderSummaryAndBudgets();
+                renderManageCategories();
+                renderSetBudgetPage();
+                showPage('add-transaction-page'); 
             }
         } else {
-            // If no start_param, show empty/default state
-            monthlyIncomeElemAddPage.innerText = '0.00 บาท';
-            monthlyExpenseElemAddPage.innerText = '0.00 บาท';
-            monthlyBalanceElemAddPage.innerText = '0.00 บาท';
-            recentTransactionsDiv.innerHTML = '<p class="text-gray-500">ยังไม่มีรายการบันทึกเลยฮับ! 😔</p>';
-            showMessage("น้องชิบะไม่ได้รับข้อมูลเริ่มต้นฮับ! โปรดลองเปิด Mini App ใหม่นะฮับ 🐶", 'info');
+            console.log("No initial data (start_param) found. Rendering default empty states.");
+            // If no initial data, still try to render empty state or default values
+            renderDashboard();
+            renderSummaryAndBudgets();
+            renderManageCategories();
+            renderSetBudgetPage();
+            showPage('add-transaction-page'); 
         }
 
-        // Show add-transaction-page by default when app loads, as per the image
-        showPage('add-transaction-page');
     </script>
 </body>
 </html>
