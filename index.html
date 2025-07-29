@@ -969,15 +969,15 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Show loading notification
-            showLoadingNotification();
+            // Show loading notification with first message
+            showLoadingNotification("น้องชิบะกำลังอ่านสลิปให้นะฮับ... 🔍");
 
             // Create FileReader to read the file
             const reader = new FileReader();
             reader.onload = function(e) {
                 const imageData = e.target.result;
                 
-                // Send image data to bot for processing
+                // Send image data to Python via Telegram bot
                 const data = {
                     action: 'process_receipt',
                     user_id: userId,
@@ -987,18 +987,21 @@
                 
                 try {
                     tg.sendData(JSON.stringify(data));
+                    
+                    // Listen for response from Python
+                    // In real implementation, this would be handled by bot webhook
+                    // For demo, we'll simulate the Python response
+                    setTimeout(() => {
+                        simulatePythonResponse();
+                    }, 3000);
+                    
                 } catch (e) {
                     console.log('Cannot send to bot, using demo mode');
+                    // Fallback to demo mode
+                    setTimeout(() => {
+                        simulatePythonResponse();
+                    }, 3000);
                 }
-                
-                // Simulate receipt processing with realistic data
-                setTimeout(() => {
-                    hideLoadingNotification();
-                    
-                    // Generate realistic OCR data based on file name or random
-                    const mockData = generateMockOCRData(file.name);
-                    processOCRResult(mockData);
-                }, 2500);
             };
             
             reader.readAsDataURL(file);
@@ -1007,8 +1010,91 @@
             event.target.value = '';
         }
 
+        // Simulate Python OCR response
+        function simulatePythonResponse() {
+            // Generate mock OCR data that would come from Python
+            const mockPythonResponse = generateMockPythonResponse();
+            
+            // Process the Python response
+            processPythonOCRResponse(mockPythonResponse);
+        }
+
+        // Generate mock Python response
+        function generateMockPythonResponse() {
+            const mockScenarios = [
+                {
+                    amount: "85.50",
+                    datetime: "2025-01-15 14:30:25",
+                    reference: "TXN-8419234567"
+                },
+                {
+                    amount: "120.00",
+                    datetime: "2025-01-15 16:45:12",
+                    reference: "REF-5627891234"
+                },
+                {
+                    amount: "45.00",
+                    datetime: "2025-01-15 12:15:33",
+                    reference: "ORD-3341567890"
+                },
+                {
+                    amount: "250.00",
+                    datetime: "2025-01-15 18:20:45",
+                    reference: "FUEL-9876543210"
+                },
+                {
+                    amount: "35.00",
+                    datetime: "2025-01-15 09:30:15",
+                    reference: "CAFE-1234567890"
+                }
+            ];
+            
+            const randomScenario = mockScenarios[Math.floor(Math.random() * mockScenarios.length)];
+            
+            return `น้องชิบะอ่านสลิปได้ข้อมูลประมาณนี้ฮับ: 
+ยอดเงิน: ${randomScenario.amount} บาท
+วันที่/เวลา: ${randomScenario.datetime}
+เลขที่อ้างอิง: ${randomScenario.reference}
+
+ยอดเงินถูกต้องไหมฮับ?`;
+        }
+
+        // Process Python OCR response
+        function processPythonOCRResponse(pythonResponse) {
+            hideLoadingNotification();
+            
+            // Parse the Python response
+            const ocrData = parsePythonResponse(pythonResponse);
+            
+            // Show confirmation modal with Python data
+            showPythonOCRConfirmationModal(pythonResponse, ocrData);
+        }
+
+        // Parse Python response text
+        function parsePythonResponse(responseText) {
+            const lines = responseText.split('\n');
+            const data = {};
+            
+            lines.forEach(line => {
+                if (line.includes('ยอดเงิน:')) {
+                    const match = line.match(/ยอดเงิน:\s*([\d.]+)\s*บาท/);
+                    if (match) data.amount = parseFloat(match[1]);
+                }
+                if (line.includes('วันที่/เวลา:')) {
+                    const match = line.match(/วันที่\/เวลา:\s*(.+)/);
+                    if (match) data.datetime = match[1].trim();
+                }
+                if (line.includes('เลขที่อ้างอิง:')) {
+                    const match = line.match(/เลขที่อ้างอิง:\s*(.+)/);
+                    if (match) data.reference = match[1].trim();
+                }
+            });
+            
+            return data;
+        }
+
         // Show loading notification
-        function showLoadingNotification() {
+        function showLoadingNotification(message = "น้องชิบะกำลังอ่านสลิป...") {
             const notification = document.createElement('div');
             notification.id = 'loading-notification';
             notification.style.cssText = `
@@ -1024,11 +1110,12 @@
                 z-index: 3000;
                 backdrop-filter: blur(10px);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                max-width: 300px;
             `;
             
             notification.innerHTML = `
                 <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-                <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">น้องชิบะกำลังอ่านสลิป...</div>
+                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; line-height: 1.4;">${message}</div>
                 <div style="font-size: 14px; opacity: 0.8;">รอแป๊บนึงนะฮับ! 🐕</div>
                 <div style="margin-top: 16px;">
                     <div style="width: 40px; height: 4px; background: rgba(255, 255, 255, 0.3); border-radius: 2px; margin: 0 auto; overflow: hidden;">
@@ -1054,61 +1141,15 @@
             }
         }
 
-        // Generate mock OCR data
-        function generateMockOCRData(fileName) {
-            const mockScenarios = [
-                {
-                    amount: 85.50,
-                    merchant: 'ร้านอาหารดีมาก',
-                    items: ['ข้าวผัดกุ้ง', 'น้ำดื่ม', 'ไข่เจียว'],
-                    reference: 'TXN-8419'
-                },
-                {
-                    amount: 120.00,
-                    merchant: 'เซเว่น อีเลฟเว่น',
-                    items: ['ขนมปัง', 'กาแฟ', 'นม'],
-                    reference: 'REF-5627'
-                },
-                {
-                    amount: 45.00,
-                    merchant: 'ร้านก๋วยเตี๋ยว',
-                    items: ['ก๋วยเตี๋ยวหมู', 'น้ำเปล่า'],
-                    reference: 'ORD-3341'
-                },
-                {
-                    amount: 250.00,
-                    merchant: 'ปตท. สถานีบริการ',
-                    items: ['น้ำมันเบนซิน'],
-                    reference: 'FUEL-9876'
-                },
-                {
-                    amount: 35.00,
-                    merchant: 'ร้านกาแฟ Coffee House',
-                    items: ['กาแฟอเมริกาโน่', 'คุกกี้'],
-                    reference: 'CAFE-1234'
-                }
-            ];
-            
-            const randomScenario = mockScenarios[Math.floor(Math.random() * mockScenarios.length)];
-            
-            return {
-                amount: randomScenario.amount,
-                merchant: randomScenario.merchant,
-                date: new Date().toISOString(),
-                reference: randomScenario.reference,
-                items: randomScenario.items,
-                file_name: fileName
-            };
+        // Add function to handle real Python OCR response (for future integration)
+        function handlePythonOCRResponse(response) {
+            // This function will be called when receiving actual data from Python
+            // For now, it processes the demo response
+            processPythonOCRResponse(response);
         }
 
-        // Process OCR result and show selection modal
-        function processOCRResult(ocrData) {
-            // Show OCR result in chat format first
-            showOCRConfirmationModal(ocrData);
-        }
-
-        // Show OCR confirmation modal (chat format)
-        function showOCRConfirmationModal(ocrData) {
+        // Show Python OCR confirmation modal
+        function showPythonOCRConfirmationModal(pythonResponse, ocrData) {
             const modal = document.createElement('div');
             modal.className = 'modal show';
             modal.style.display = 'flex';
@@ -1121,22 +1162,16 @@
                         <span class="close" onclick="hideOCRConfirmationModal()">&times;</span>
                     </div>
                     <div class="modal-body">
-                        <div style="background: rgba(33, 150, 243, 0.1); border: 1px solid #2196F3; border-radius: 12px; padding: 20px; margin-bottom: 20px; font-family: monospace;">
-                            <div style="color: #2196F3; font-weight: 600; margin-bottom: 12px;">🤖 น้องชิบะอ่านสลิปได้ข้อมูลประมาณนี้ฮับ:</div>
-                            <div style="margin-bottom: 8px; line-height: 1.6;">
-                                <strong>ยอดเงิน:</strong> ${ocrData.amount.toFixed(2)} บาท<br>
-                                <strong>วันที่/เวลา:</strong> ${formatDateTimeForOCR(ocrData.date)}<br>
-                                ${ocrData.reference ? `<strong>เลขที่อ้างอิง:</strong> ${ocrData.reference}<br>` : ''}
-                                ${ocrData.merchant ? `<strong>ร้านค้า:</strong> ${ocrData.merchant}<br>` : ''}
-                            </div>
-                            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(33, 150, 243, 0.2); color: #2196F3; font-weight: 600;">
-                                🤔 ยอดเงินถูกต้องไหมฮับ?
+                        <div style="background: rgba(33, 150, 243, 0.1); border: 1px solid #2196F3; border-radius: 12px; padding: 20px; margin-bottom: 20px; font-family: monospace; white-space: pre-line;">
+                            <div style="color: #2196F3; font-weight: 600; margin-bottom: 12px;">🤖 Python OCR Response:</div>
+                            <div style="margin-bottom: 8px; line-height: 1.6; font-size: 14px;">
+                                ${pythonResponse}
                             </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                            <button class="btn btn-success" onclick="confirmOCRAmount()">✅ ถูกต้อง!</button>
-                            <button class="btn" onclick="editOCRAmount()" style="background: #ff9800; color: white;">✏️ แก้ไข</button>
+                            <button class="btn btn-success" onclick="confirmPythonOCRAmount()">✅ ถูกต้อง!</button>
+                            <button class="btn" onclick="editPythonOCRAmount()" style="background: #ff9800; color: white;">✏️ แก้ไข</button>
                         </div>
                         
                         <button class="btn" onclick="hideOCRConfirmationModal()" style="background: #6c757d; color: white; margin-top: 8px;">❌ ยกเลิก</button>
@@ -1145,35 +1180,25 @@
             `;
             
             document.body.appendChild(modal);
-            window.ocrData = ocrData;
+            window.pythonOcrData = ocrData;
+            window.pythonResponse = pythonResponse;
         }
 
-        // Format date time for OCR display
-        function formatDateTimeForOCR(dateString) {
-            const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        }
 
-        // Confirm OCR amount and proceed to category selection
-        function confirmOCRAmount() {
+
+        // Confirm Python OCR amount and proceed to category selection
+        function confirmPythonOCRAmount() {
             hideOCRConfirmationModal();
-            showOCRResultModal(window.ocrData);
+            showPythonOCRResultModal(window.pythonOcrData);
         }
 
-        // Edit OCR amount
-        function editOCRAmount() {
-            const newAmount = prompt('🐕 ใส่ยอดเงินที่ถูกต้องครับ:', window.ocrData.amount);
+        // Edit Python OCR amount
+        function editPythonOCRAmount() {
+            const newAmount = prompt('🐕 ใส่ยอดเงินที่ถูกต้องครับ:', window.pythonOcrData.amount);
             if (newAmount && !isNaN(parseFloat(newAmount))) {
-                window.ocrData.amount = parseFloat(newAmount);
+                window.pythonOcrData.amount = parseFloat(newAmount);
                 hideOCRConfirmationModal();
-                showOCRResultModal(window.ocrData);
+                showPythonOCRResultModal(window.pythonOcrData);
             }
         }
 
@@ -1185,8 +1210,8 @@
             }
         }
 
-        // Show OCR result modal
-        function showOCRResultModal(ocrData) {
+        // Show Python OCR result modal
+        function showPythonOCRResultModal(ocrData) {
             const modal = document.createElement('div');
             modal.className = 'modal show';
             modal.style.display = 'flex';
@@ -1200,36 +1225,35 @@
                     </div>
                     <div class="modal-body">
                         <div style="background: rgba(76, 175, 80, 0.1); border: 1px solid #4CAF50; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-                            <div style="font-weight: 600; color: #4CAF50; margin-bottom: 12px;">📋 ข้อมูลที่อ่านได้:</div>
-                            <div style="margin-bottom: 8px;"><strong>💰 จำนวนเงิน:</strong> ฿${ocrData.amount.toLocaleString()}</div>
-                            <div style="margin-bottom: 8px;"><strong>🏪 ร้านค้า:</strong> ${ocrData.merchant}</div>
-                            <div style="margin-bottom: 8px;"><strong>📅 วันที่:</strong> ${formatDate(ocrData.date)}</div>
-                            ${ocrData.items ? `<div style="margin-bottom: 8px;"><strong>🛍️ รายการ:</strong> ${ocrData.items.join(', ')}</div>` : ''}
+                            <div style="font-weight: 600; color: #4CAF50; margin-bottom: 12px;">📋 ข้อมูลจาก Python OCR:</div>
+                            <div style="margin-bottom: 8px;"><strong>💰 จำนวนเงิน:</strong> ฿${ocrData.amount ? ocrData.amount.toLocaleString() : 'ไม่พบข้อมูล'}</div>
+                            <div style="margin-bottom: 8px;"><strong>📅 วันที่/เวลา:</strong> ${ocrData.datetime || 'ไม่พบข้อมูล'}</div>
+                            <div style="margin-bottom: 8px;"><strong>🔢 เลขที่อ้างอิง:</strong> ${ocrData.reference || 'ไม่พบข้อมูล'}</div>
                         </div>
 
                         <div class="form-group">
                             <label>🐕 น้องชิบะอยากรู้ว่าเป็นเงินเข้าหรือออกครับ?</label>
                             <div class="tab-container">
-                                <div class="tab" onclick="selectOCRTransactionType('income')">💚 เงินเข้า</div>
-                                <div class="tab active" onclick="selectOCRTransactionType('expense')">💸 เงินออก</div>
+                                <div class="tab" onclick="selectPythonOCRTransactionType('income')">💚 เงินเข้า</div>
+                                <div class="tab active" onclick="selectPythonOCRTransactionType('expense')">💸 เงินออก</div>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label>🏷️ เลือกหมวดหมู่ที่เหมาะสมครับ</label>
-                            <select id="ocr-category">
+                            <select id="python-ocr-category">
                                 <option value="">🤔 เลือกหมวดหมู่กันเถอะ</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label>📝 เพิ่มเติมอะไรมั้ยครับ?</label>
-                            <textarea id="ocr-description" rows="2" placeholder="🐾 เล่าให้น้องชิบะฟังหน่อย...">${ocrData.items ? '🧾 ' + ocrData.items.join(', ') + ' (' + ocrData.file_name + ')' : '🧾 จากใบเสร็จ: ' + ocrData.file_name}</textarea>
+                            <textarea id="python-ocr-description" rows="2" placeholder="🐾 เล่าให้น้องชิบะฟังหน่อย...">🧾 จากใบเสร็จ Python OCR - เลขอ้างอิง: ${ocrData.reference || 'ไม่ระบุ'}</textarea>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <button class="btn" onclick="hideOCRResultModal()" style="background: #6c757d; color: white;">❌ ยกเลิก</button>
-                            <button class="btn btn-success" onclick="confirmOCRTransaction()">✅ บันทึกเลย!</button>
+                            <button class="btn btn-success" onclick="confirmPythonOCRTransaction()">✅ บันทึกเลย!</button>
                         </div>
                     </div>
                 </div>
@@ -1238,24 +1262,16 @@
             document.body.appendChild(modal);
             
             // Set default values
-            window.ocrData = ocrData;
-            window.ocrTransactionType = 'expense'; // Default to expense
+            window.pythonOcrData = ocrData;
+            window.pythonOcrTransactionType = 'expense'; // Default to expense
             
             // Update category options for expense
-            updateOCRCategoryOptions('expense');
-            
-            // Auto-select suggested category
-            const categorySelect = document.getElementById('ocr-category');
-            if (ocrData.merchant && ocrData.merchant.includes('อาหาร')) {
-                categorySelect.value = 'ค่าอาหาร';
-            } else if (ocrData.merchant && ocrData.merchant.includes('ปตท')) {
-                categorySelect.value = 'ค่าเดินทาง';
-            }
+            updatePythonOCRCategoryOptions('expense');
         }
 
-        // Select transaction type in OCR modal
-        function selectOCRTransactionType(type) {
-            window.ocrTransactionType = type;
+        // Select transaction type in Python OCR modal
+        function selectPythonOCRTransactionType(type) {
+            window.pythonOcrTransactionType = type;
             
             // Update tab appearance
             const tabs = document.querySelectorAll('#ocr-result-modal .tab-container .tab');
@@ -1263,12 +1279,12 @@
             event.target.classList.add('active');
             
             // Update category options
-            updateOCRCategoryOptions(type);
+            updatePythonOCRCategoryOptions(type);
         }
 
-        // Update category options in OCR modal
-        function updateOCRCategoryOptions(type) {
-            const categorySelect = document.getElementById('ocr-category');
+        // Update category options in Python OCR modal
+        function updatePythonOCRCategoryOptions(type) {
+            const categorySelect = document.getElementById('python-ocr-category');
             const categoryKey = type === 'income' ? 'รายรับ' : 'รายจ่าย';
             
             categorySelect.innerHTML = '<option value="">🤔 เลือกหมวดหมู่กันเถอะ</option>';
@@ -1281,25 +1297,39 @@
             });
         }
 
-        // Confirm OCR transaction
-        function confirmOCRTransaction() {
-            const category = document.getElementById('ocr-category').value;
-            const description = document.getElementById('ocr-description').value;
+        // Confirm Python OCR transaction
+        function confirmPythonOCRTransaction() {
+            const category = document.getElementById('python-ocr-category').value;
+            const description = document.getElementById('python-ocr-description').value;
 
             if (!category) {
                 tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
                 return;
             }
 
+            // Convert datetime to date format for storage
+            let transactionDate = new Date().toISOString().split('T')[0]; // Default to today
+            if (window.pythonOcrData.datetime) {
+                try {
+                    const parsedDate = new Date(window.pythonOcrData.datetime);
+                    if (!isNaN(parsedDate.getTime())) {
+                        transactionDate = parsedDate.toISOString().split('T')[0];
+                    }
+                } catch (e) {
+                    console.log('Error parsing date:', e);
+                }
+            }
+
             const transaction = {
                 id: Date.now(),
-                type: window.ocrTransactionType,
-                amount: window.ocrData.amount,
+                type: window.pythonOcrTransactionType,
+                amount: window.pythonOcrData.amount,
                 category: category,
                 description: description,
-                date: window.ocrData.date,
+                date: transactionDate,
                 timestamp: new Date().toISOString(),
-                source: 'ocr'
+                source: 'python_ocr',
+                reference: window.pythonOcrData.reference
             };
 
             // Add to transactions
@@ -1313,7 +1343,7 @@
             hideOCRResultModal();
 
             // Show success and switch to history
-            tg.showAlert('🎉 เย้! น้องชิบะบันทึกจากใบเสร็จให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            tg.showAlert('🎉 เย้! น้องชิบะบันทึกจาก Python OCR ให้แล้วนะครับ! เก่งมากเลย! 🐾');
             switchTab('history');
 
             // Auto-sync
@@ -1328,8 +1358,10 @@
             if (modal) {
                 modal.remove();
             }
-            window.ocrData = null;
-            window.ocrTransactionType = null;
+            // Clean up Python OCR data
+            window.pythonOcrData = null;
+            window.pythonOcrTransactionType = null;
+            window.pythonResponse = null;
         }
 
         // Load transactions
@@ -1863,5 +1895,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9668dd68701a7b6c',t:'MTc1Mzc1Mjc3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9668ec860090d326',t:'MTc1Mzc1MzM5MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
