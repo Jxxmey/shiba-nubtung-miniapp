@@ -969,8 +969,8 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Show loading state
-            tg.showAlert('🔍 น้องชิบะกำลังดูใบเสร็จอยู่นะครับ รอแป๊บนึงนะ! 🐕');
+            // Show loading notification
+            showLoadingNotification();
 
             // Create FileReader to read the file
             const reader = new FileReader();
@@ -985,25 +985,120 @@
                     file_name: file.name
                 };
                 
-                tg.sendData(JSON.stringify(data));
+                try {
+                    tg.sendData(JSON.stringify(data));
+                } catch (e) {
+                    console.log('Cannot send to bot, using demo mode');
+                }
                 
-                // For demo purposes, simulate receipt processing
+                // Simulate receipt processing with realistic data
                 setTimeout(() => {
-                    processOCRResult({
-                        amount: 50.00,
-                        merchant: 'ร้านอาหาร ABC',
-                        date: new Date().toISOString(),
-                        reference: 'c. 8419',
-                        items: ['ข้าวผัด', 'น้ำดื่ม'],
-                        file_name: file.name
-                    });
-                }, 2000);
+                    hideLoadingNotification();
+                    
+                    // Generate realistic OCR data based on file name or random
+                    const mockData = generateMockOCRData(file.name);
+                    processOCRResult(mockData);
+                }, 2500);
             };
             
             reader.readAsDataURL(file);
             
             // Clear the input so the same file can be selected again
             event.target.value = '';
+        }
+
+        // Show loading notification
+        function showLoadingNotification() {
+            const notification = document.createElement('div');
+            notification.id = 'loading-notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 24px;
+                border-radius: 16px;
+                text-align: center;
+                z-index: 3000;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            `;
+            
+            notification.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">น้องชิบะกำลังอ่านสลิป...</div>
+                <div style="font-size: 14px; opacity: 0.8;">รอแป๊บนึงนะฮับ! 🐕</div>
+                <div style="margin-top: 16px;">
+                    <div style="width: 40px; height: 4px; background: rgba(255, 255, 255, 0.3); border-radius: 2px; margin: 0 auto; overflow: hidden;">
+                        <div style="width: 100%; height: 100%; background: #FF8C42; border-radius: 2px; animation: loading 2s infinite;"></div>
+                    </div>
+                </div>
+                <style>
+                    @keyframes loading {
+                        0% { transform: translateX(-100%); }
+                        100% { transform: translateX(100%); }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(notification);
+        }
+
+        // Hide loading notification
+        function hideLoadingNotification() {
+            const notification = document.getElementById('loading-notification');
+            if (notification) {
+                notification.remove();
+            }
+        }
+
+        // Generate mock OCR data
+        function generateMockOCRData(fileName) {
+            const mockScenarios = [
+                {
+                    amount: 85.50,
+                    merchant: 'ร้านอาหารดีมาก',
+                    items: ['ข้าวผัดกุ้ง', 'น้ำดื่ม', 'ไข่เจียว'],
+                    reference: 'TXN-8419'
+                },
+                {
+                    amount: 120.00,
+                    merchant: 'เซเว่น อีเลฟเว่น',
+                    items: ['ขนมปัง', 'กาแฟ', 'นม'],
+                    reference: 'REF-5627'
+                },
+                {
+                    amount: 45.00,
+                    merchant: 'ร้านก๋วยเตี๋ยว',
+                    items: ['ก๋วยเตี๋ยวหมู', 'น้ำเปล่า'],
+                    reference: 'ORD-3341'
+                },
+                {
+                    amount: 250.00,
+                    merchant: 'ปตท. สถานีบริการ',
+                    items: ['น้ำมันเบนซิน'],
+                    reference: 'FUEL-9876'
+                },
+                {
+                    amount: 35.00,
+                    merchant: 'ร้านกาแฟ Coffee House',
+                    items: ['กาแฟอเมริกาโน่', 'คุกกี้'],
+                    reference: 'CAFE-1234'
+                }
+            ];
+            
+            const randomScenario = mockScenarios[Math.floor(Math.random() * mockScenarios.length)];
+            
+            return {
+                amount: randomScenario.amount,
+                merchant: randomScenario.merchant,
+                date: new Date().toISOString(),
+                reference: randomScenario.reference,
+                items: randomScenario.items,
+                file_name: fileName
+            };
         }
 
         // Process OCR result and show selection modal
@@ -1768,5 +1863,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9668d55735dcee29',t:'MTc1Mzc1MjQ0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9668dd68701a7b6c',t:'MTc1Mzc1Mjc3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
