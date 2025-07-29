@@ -268,6 +268,14 @@
         .refresh-button:hover {
             background-color: #2980b9;
         }
+        /* Debugging Info visibility */
+        #debug-info {
+            display: block !important; /* Force display for debugging */
+            background-color: #f0f0f0;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -278,7 +286,7 @@
 
         <div class="message-box" id="messageBox"></div>
         
-        <!-- Debugging Info (will be removed later) -->
+        <!-- Debugging Info -->
         <div id="debug-info" class="text-xs text-gray-400 mb-4">
             <p id="debug-start-param-status">Start Param Status: Not received</p>
             <p id="debug-data-parse-status">Data Parse Status: Pending</p>
@@ -795,7 +803,7 @@
                 return;
             }
             if (isNaN(amount) || amount <= 0) {
-                showMessage('โปรดระบุจำนวนงบประมาณที่ถูกต้อง (มากกว่า 0) ด้วยนะฮับ! 🥺', 'error');
+                showMessage('โปรดระบุจำนวนงบประมาณที่ถูกต้อง (มากกว่า 0) ด้วยนะฮับ! �', 'error');
                 return;
             }
 
@@ -838,11 +846,12 @@
                 debugStartParamStatus.style.color = 'green';
                 console.log("Encoded start_param (from initDataUnsafe):", encodedData);
             } else {
-                console.log("No initial data (start_param) found in Telegram.WebApp.initDataUnsafe. Checking URL parameters directly.");
+                console.log("No initial data (start_param) found in Telegram.WebApp.initDataUnsafe.");
                 debugStartParamStatus.textContent = "Start Param Status: Not received (via initDataUnsafe)";
                 debugStartParamStatus.style.color = 'red';
 
                 // 2. Fallback: Try to get start_param directly from URL
+                console.log("Current window.location.search:", window.location.search); // ADDED LOG
                 const urlParams = new URLSearchParams(window.location.search);
                 encodedData = urlParams.get('start_param');
 
@@ -851,7 +860,7 @@
                     debugStartParamStatus.style.color = 'green';
                     console.log("Found start_param directly in URL:", encodedData);
                 } else {
-                    console.log("No initial data (start_param) found in URL either.");
+                    console.log("No initial data (start_param) found in URL either. This is unexpected if URL contains it.");
                     debugStartParamStatus.textContent = "Start Param Status: No start_param found anywhere";
                     debugStartParamStatus.style.color = 'orange';
                 }
@@ -907,10 +916,14 @@
         }
 
         // Call loadInitialData when the Telegram WebApp is ready
-        // Using Telegram.WebApp.ready() as the primary trigger
-        Telegram.WebApp.onEvent('ready', loadInitialData);
-        // Also call it immediately in case 'ready' event already fired (though 'ready' is usually reliable)
-        loadInitialData(); 
+        // Using Telegram.WebApp.onEvent('ready', loadInitialData) as the primary trigger
+        Telegram.WebApp.onEvent('ready', () => {
+            // Add a small delay to ensure initDataUnsafe is fully populated
+            setTimeout(loadInitialData, 50); // Try with a 50ms delay
+        });
+        // The immediate call to loadInitialData() is removed as it might fire too early.
+        // loadInitialData(); // REMOVED THIS LINE
     </script>
 </body>
 </html>
+�
