@@ -6,7 +6,7 @@
     <title>🐕 Shiba Bot - เพื่อนจัดการเงินของคุณ</title>
     <meta name="description" content="น้องชิบะจะช่วยดูแลการเงินของคุณ! 🐾">
     <meta name="theme-color" content="#FF8C42">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://ocr-slip.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self' https://ocr-slip.onrender.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://ocr-proxy-i92y.onrender.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://ocr-proxy-i92y.onrender.com https://telegram.org;">
     
     <!-- PWA Support -->
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2hpYmEgQm90IC0g4LmA4Lie4Li34LmI4Lit4LiZ4LiI4Lix4LiU4LiB4Liy4Lij4LmA4LiH4Li04LiZ4LiC4Lit4LiH4LiE4Li44LiTIiwic2hvcnRfbmFtZSI6IlNoaWJhIEJvdCIsInN0YXJ0X3VybCI6Ii8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjRkY4QzQyIiwidGhlbWVfY29sb3IiOiIjRkY4QzQyIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjNhV1IwYUQwaU1USTRJaUJvWldsbmFIUTlJakV5T0NJZ2RtbGxkMEp2ZUQwaU1DQXdJREV5T0NBeU9EZ2lJSGh0Ykc1elBTSm9kSFJ3T2k4dmQzZDNMbmN6TG05eVp5OHlNREF3TDNOMlp5SStQR05wY21Oc1pTQmplRDBpTmpRaUlHTjVQU0kyTkNJZ2NqMGlOVEFpSUdacGJHdzlJaU5HUmpoRE5ESWlMejQ4ZEdWNGRDQjRQU0kyTkNJZ2VUMGlOekFpSUdacGJHdzlJaU5tWm1ZaUlHWnZiblF0YzJsNlpUMGlNVGdpSUdadmJuUXRabUZ0YVd4NVBTSnRiMjV2YzNCaFkyVWlJSFJsZUhRdFlXNWphRzl5UFNKdGFXUmtiR1VpUGlCOElEeDBjM0JoYmlCNFBTSTJOQ0lnZVQwaU9EQWlQaUE4TDNSemNHRnVQaUE4TDNSbGVIUStQQzl6ZG1jKyIsInNpemVzIjoiMTI4eDEyOCIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
@@ -47,7 +47,7 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            background: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
             animation: float 20s infinite linear;
         }
 
@@ -521,7 +521,7 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            background: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
             animation: float 20s infinite linear;
         }
 
@@ -1010,7 +1010,7 @@
             }
         }
 
-        // Handle receipt upload
+        // Handle receipt upload - Updated to use proxy
         function handleReceiptUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1028,16 +1028,13 @@
             // Show loading screen
             showLoadingScreen();
 
-            // Create FormData for API request (using 'file' parameter as specified)
+            // Create FormData for proxy API request
             const formData = new FormData();
             formData.append('file', file);
 
-            // Call the OCR API with correct endpoint
-            fetch('https://ocr-slip.onrender.com/parse-slip-image', {
+            // Call YOUR proxy server instead of the direct OCR API
+            fetch('https://ocr-proxy-i92y.onrender.com/api/ocr', {
                 method: 'POST',
-                headers: {
-                    'accept': 'application/json'
-                },
                 body: formData
             })
             .then(response => {
@@ -1046,14 +1043,19 @@
                 }
                 return response.json();
             })
-            .then(data => {
+            .then(result => {
                 // Hide loading screen
                 hideLoadingScreen();
-                // Process the API response directly
-                processAPIResponse(data);
+                
+                if (result.success) {
+                    // Process the API response
+                    processAPIResponse(result.data);
+                } else {
+                    throw new Error(result.message || 'OCR processing failed');
+                }
             })
             .catch(error => {
-                console.error('OCR API Error:', error);
+                console.error('OCR Proxy Error:', error);
                 hideLoadingScreen();
                 
                 // Show error message
@@ -2005,5 +2007,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9669aae8d488d329',t:'MTc1Mzc2MTE4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9669eabc60a9ee3d',t:'MTc1Mzc2MzgwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
