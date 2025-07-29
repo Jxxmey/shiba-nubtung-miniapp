@@ -685,6 +685,9 @@
         <div id="sync-status" style="margin-top: 8px; font-size: 12px; opacity: 0.8; display: none;">
             <span id="sync-indicator">🔄</span> <span id="sync-text">กำลังซิงค์ข้อมูล...</span>
         </div>
+        <div id="database-status" style="margin-top: 4px; font-size: 11px; opacity: 0.6; display: none;">
+            <span id="db-indicator">💾</span> <span id="db-text">ฐานข้อมูล: ไม่ทราบสถานะ</span>
+        </div>
     </div>
 
     <div class="tab-container">
@@ -970,16 +973,20 @@
                     dateInput.valueAsDate = new Date();
                 }
                 
-                // Set up main button
+                // Set up main button with database sync
                 try {
                     if (tg && tg.MainButton) {
-                        tg.MainButton.setText('🔄 ซิงค์ข้อมูล');
+                        tg.MainButton.setText('💾 ซิงค์ฐานข้อมูล');
                         tg.MainButton.onClick(() => {
+                            showSyncStatus('กำลังซิงค์ฐานข้อมูล...', '💾');
+                            showDatabaseStatus('กำลังบันทึกลงฐานข้อมูล...', '⏳');
+                            
                             syncAllDataToBot();
-                            tg.MainButton.setText('✅ ซิงค์แล้ว');
+                            
+                            tg.MainButton.setText('✅ บันทึกแล้ว');
                             setTimeout(() => {
-                                tg.MainButton.setText('🔄 ซิงค์ข้อมูล');
-                            }, 2000);
+                                tg.MainButton.setText('💾 ซิงค์ฐานข้อมูล');
+                            }, 3000);
                         });
                         tg.MainButton.show();
                     }
@@ -1104,7 +1111,7 @@
             document.getElementById('new-category-name').value = '';
         }
 
-        // Add new category - Make it global
+        // Add new category with database sync - Make it global
         window.addNewCategory = function() {
             const newCategoryName = document.getElementById('new-category-name').value.trim();
             
@@ -1127,7 +1134,27 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
-            // Auto-sync to bot
+            // Send category update to bot for database storage
+            const categoryData = {
+                action: 'add_category',
+                user_id: userId,
+                user_info: userInfo,
+                category_type: categoryKey,
+                category_name: newCategoryName,
+                all_categories: categories
+            };
+
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(categoryData));
+                    console.log('Category sent to bot for database storage:', categoryData);
+                    showSyncStatus('บันทึกหมวดหมู่ลงฐานข้อมูล...', '💾');
+                }
+            } catch (e) {
+                console.log('Cannot send category to bot:', e);
+            }
+            
+            // Auto-sync all data to bot
             autoSync();
             
             // Update dropdown
@@ -1232,24 +1259,30 @@
             }, 1000);
         }
 
-        // Send transaction to bot
+        // Send transaction to bot with proper database storage
         function sendToBot(transaction) {
             const data = {
                 action: 'add_transaction',
                 transaction: transaction,
-                user_id: userId
+                user_id: userId,
+                user_info: userInfo
             };
 
-            // Send data to bot
+            // Send data to bot immediately
             try {
                 if (tg && typeof tg.sendData === 'function') {
                     tg.sendData(JSON.stringify(data));
-                    console.log('Data sent to bot:', data);
+                    console.log('Transaction sent to bot for database storage:', data);
+                    
+                    // Show immediate feedback
+                    showSyncStatus('บันทึกลงฐานข้อมูล...', '💾');
                 } else {
-                    console.log('Telegram sendData not available, data:', data);
+                    console.log('Telegram sendData not available, storing locally only:', data);
+                    showSyncStatus('บันทึกในเครื่องเท่านั้น', '⚠️');
                 }
             } catch (e) {
                 console.log('Cannot send data to bot:', e);
+                showSyncStatus('ไม่สามารถซิงค์ได้', '❌');
             }
         }
 
@@ -1266,6 +1299,19 @@
             }
         }
 
+        // Show database status
+        function showDatabaseStatus(message = 'ฐานข้อมูล: ไม่ทราบสถานะ', indicator = '💾') {
+            const statusElement = document.getElementById('database-status');
+            const indicatorElement = document.getElementById('db-indicator');
+            const textElement = document.getElementById('db-text');
+            
+            if (statusElement && indicatorElement && textElement) {
+                indicatorElement.textContent = indicator;
+                textElement.textContent = message;
+                statusElement.style.display = 'block';
+            }
+        }
+
         // Hide sync status
         function hideSyncStatus() {
             const statusElement = document.getElementById('sync-status');
@@ -1273,6 +1319,16 @@
                 setTimeout(() => {
                     statusElement.style.display = 'none';
                 }, 2000);
+            }
+        }
+
+        // Hide database status
+        function hideDatabaseStatus() {
+            const statusElement = document.getElementById('database-status');
+            if (statusElement) {
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 3000);
             }
         }
 
@@ -1292,29 +1348,35 @@
             }, 1000);
         }
 
-        // Sync all data to bot
+        // Sync all data to bot with database storage
         function syncAllDataToBot() {
             const syncData = {
                 action: 'sync_all_data',
                 user_id: userId,
+                user_info: userInfo,
                 data: {
                     transactions: transactions,
                     categories: categories,
                     budgets: budgets,
                     last_sync: new Date().toISOString()
-                }
+                },
+                force_database_save: true
             };
 
             try {
                 if (tg && typeof tg.sendData === 'function') {
                     tg.sendData(JSON.stringify(syncData));
-                    console.log('All data synced to bot:', syncData);
+                    console.log('All data synced to bot with database storage:', syncData);
                     
-                    showSyncStatus('ซิงค์ข้อมูลสำเร็จ!', '✅');
+                    showSyncStatus('บันทึกลงฐานข้อมูลสำเร็จ!', '✅');
+                    
+                    // Also save to localStorage as backup
+                    localStorage.setItem('shiba_last_sync', new Date().toISOString());
+                    
                     hideSyncStatus();
                 } else {
-                    console.log('Telegram sendData not available, sync data:', syncData);
-                    showSyncStatus('ไม่สามารถซิงค์ได้ (ทดสอบ)', '⚠️');
+                    console.log('Telegram sendData not available, storing locally only:', syncData);
+                    showSyncStatus('บันทึกในเครื่องเท่านั้น', '⚠️');
                     hideSyncStatus();
                 }
             } catch (e) {
@@ -1324,43 +1386,72 @@
             }
         }
 
-        // Load data from bot (when app starts)
+        // Load data from bot database (when app starts)
         function loadDataFromBot() {
             const requestData = {
                 action: 'get_user_data',
-                user_id: userId
+                user_id: userId,
+                user_info: userInfo,
+                request_from_database: true
             };
 
             try {
                 if (tg && typeof tg.sendData === 'function') {
                     tg.sendData(JSON.stringify(requestData));
-                    console.log('Requesting data from bot:', requestData);
+                    console.log('Requesting data from bot database:', requestData);
+                    
+                    showSyncStatus('โหลดข้อมูลจากฐานข้อมูล...', '📥');
+                    
+                    // Set timeout for loading data
+                    setTimeout(() => {
+                        const currentStatus = document.getElementById('sync-text')?.textContent;
+                        if (currentStatus && currentStatus.includes('โหลดข้อมูล')) {
+                            console.log('Database load timeout, falling back to local data');
+                            showSyncStatus('โหลดจากเครื่อง', '💾');
+                            loadLocalData();
+                            hideSyncStatus();
+                        }
+                    }, 5000);
                 } else {
                     console.log('Telegram sendData not available, loading local data only');
+                    showSyncStatus('โหลดจากเครื่อง', '💾');
                     loadLocalData();
+                    hideSyncStatus();
                 }
             } catch (e) {
                 console.log('Cannot request data from bot, loading local data:', e);
+                showSyncStatus('โหลดจากเครื่อง', '💾');
                 loadLocalData();
+                hideSyncStatus();
             }
         }
 
-        // Handle data received from bot
+        // Handle data received from bot database
         function handleBotData(botData) {
             try {
-                if (botData.transactions) {
+                console.log('Received data from bot:', botData);
+                
+                let dataLoaded = false;
+                
+                if (botData.transactions && Array.isArray(botData.transactions)) {
                     transactions = botData.transactions;
                     localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
+                    dataLoaded = true;
+                    console.log(`Loaded ${transactions.length} transactions from database`);
                 }
                 
-                if (botData.categories) {
+                if (botData.categories && typeof botData.categories === 'object') {
                     categories = botData.categories;
                     localStorage.setItem('shiba_categories', JSON.stringify(categories));
+                    dataLoaded = true;
+                    console.log('Loaded categories from database');
                 }
                 
-                if (botData.budgets) {
+                if (botData.budgets && Array.isArray(botData.budgets)) {
                     budgets = botData.budgets;
                     localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
+                    dataLoaded = true;
+                    console.log(`Loaded ${budgets.length} budgets from database`);
                 }
 
                 // Update all displays
@@ -1371,16 +1462,26 @@
                 displayBudgets();
                 updateBudgetCategoryOptions();
 
-                // Show sync status
-                showSyncStatus('ข้อมูลจากบอทโหลดสำเร็จ!', '✅');
+                // Show appropriate sync status
+                if (dataLoaded) {
+                    showSyncStatus('โหลดจากฐานข้อมูลสำเร็จ!', '✅');
+                    localStorage.setItem('shiba_last_database_sync', new Date().toISOString());
+                } else {
+                    showSyncStatus('ไม่มีข้อมูลในฐานข้อมูล', '📭');
+                }
+                
                 hideSyncStatus();
 
-                console.log('Data loaded from bot successfully');
+                console.log('Data loaded from bot database successfully');
             } catch (e) {
                 console.error('Error handling bot data:', e);
-                showSyncStatus('โหลดข้อมูลจากบอทล้มเหลว', '❌');
+                showSyncStatus('โหลดข้อมูลจากฐานข้อมูลล้มเหลว', '❌');
                 hideSyncStatus();
-                loadLocalData(); // Fallback to local data
+                
+                // Fallback to local data
+                setTimeout(() => {
+                    loadLocalData();
+                }, 1000);
             }
         }
 
@@ -2178,7 +2279,7 @@
             showAddTransactionModal();
         }
 
-        // Update transaction function
+        // Update transaction function with database sync
         function updateTransaction() {
             const amount = parseFloat(document.getElementById('amount').value);
             const category = document.getElementById('category').value;
@@ -2203,6 +2304,8 @@
             // Find and update the transaction
             const transactionIndex = transactions.findIndex(t => t.id == window.editingTransactionId);
             if (transactionIndex > -1) {
+                const oldTransaction = {...transactions[transactionIndex]};
+                
                 transactions[transactionIndex] = {
                     ...transactions[transactionIndex],
                     amount: amount,
@@ -2211,6 +2314,28 @@
                     detail: description,
                     date: new Date(date).toISOString()
                 };
+
+                const updatedTransaction = transactions[transactionIndex];
+
+                // Send update to bot for database storage
+                const updateData = {
+                    action: 'update_transaction',
+                    user_id: userId,
+                    user_info: userInfo,
+                    transaction_id: window.editingTransactionId,
+                    old_transaction: oldTransaction,
+                    updated_transaction: updatedTransaction
+                };
+
+                try {
+                    if (tg && typeof tg.sendData === 'function') {
+                        tg.sendData(JSON.stringify(updateData));
+                        console.log('Update transaction sent to bot:', updateData);
+                        showSyncStatus('อัปเดตในฐานข้อมูล...', '✏️');
+                    }
+                } catch (e) {
+                    console.log('Cannot send update to bot:', e);
+                }
 
                 // Save to localStorage
                 localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
@@ -2265,6 +2390,25 @@
             // Confirm deletion
             const confirmDelete = confirm(`🗑️ ต้องการลบรายการ "${transaction.category}" จำนวน ฿${transaction.amount.toLocaleString()} ใช่หรือไม่?`);
             if (!confirmDelete) return;
+
+            // Send delete request to bot for database
+            const deleteData = {
+                action: 'delete_transaction',
+                user_id: userId,
+                user_info: userInfo,
+                transaction_id: transactionId,
+                transaction: transaction
+            };
+
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(deleteData));
+                    console.log('Delete transaction sent to bot:', deleteData);
+                    showSyncStatus('ลบจากฐานข้อมูล...', '🗑️');
+                }
+            } catch (e) {
+                console.log('Cannot send delete request to bot:', e);
+            }
 
             // Remove from local array
             const index = transactions.findIndex(t => t.id == transactionId);
@@ -2350,6 +2494,7 @@
 
             const budget = {
                 id: Date.now(),
+                user_id: userId,
                 category: category,
                 amount: amount,
                 created_date: new Date().toISOString()
@@ -2359,12 +2504,32 @@
             const existingBudgetIndex = budgets.findIndex(b => b.category === category);
             if (existingBudgetIndex >= 0) {
                 budgets[existingBudgetIndex].amount = amount;
+                budgets[existingBudgetIndex].id = budget.id; // Update ID for sync
             } else {
                 budgets.push(budget);
             }
             
             // Save to localStorage
             localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
+            
+            // Send budget to bot for database storage
+            const budgetData = {
+                action: 'set_budget',
+                user_id: userId,
+                user_info: userInfo,
+                budget: budget,
+                all_budgets: budgets
+            };
+
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(budgetData));
+                    console.log('Budget sent to bot for database storage:', budgetData);
+                    showSyncStatus('บันทึกงบประมาณลงฐานข้อมูล...', '💾');
+                }
+            } catch (e) {
+                console.log('Cannot send budget to bot:', e);
+            }
             
             // Auto-sync all data to bot
             autoSync();
