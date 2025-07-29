@@ -927,6 +927,7 @@
         };
         let userId = null;
         let userInfo = null;
+        let syncTimeout = null;
 
         // Initialize the app
         function init() {
@@ -1126,10 +1127,8 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
-            // Sync to bot
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            // Auto-sync to bot
+            autoSync();
             
             // Update dropdown
             updateCategoryOptions();
@@ -1206,9 +1205,7 @@
             sendToBot(transaction);
             
             // Auto-sync all data to keep everything in sync
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            autoSync();
 
             // Clear form
             document.getElementById('amount').value = '';
@@ -1279,10 +1276,24 @@
             }
         }
 
-        // Sync all data to bot
-        function syncAllDataToBot() {
+        // Auto-sync with debounce (1 second delay)
+        function autoSync() {
+            // Clear existing timeout
+            if (syncTimeout) {
+                clearTimeout(syncTimeout);
+            }
+            
+            // Show sync indicator immediately
             showSyncStatus('กำลังซิงค์ข้อมูล...', '🔄');
             
+            // Set new timeout
+            syncTimeout = setTimeout(() => {
+                syncAllDataToBot();
+            }, 1000);
+        }
+
+        // Sync all data to bot
+        function syncAllDataToBot() {
             const syncData = {
                 action: 'sync_all_data',
                 user_id: userId,
@@ -1391,14 +1402,19 @@
             const formData = new FormData();
             formData.append('file', file);
 
-            // Call OCR API
+            // Call OCR API with timeout and better error handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
             fetch('https://ocr-proxy-i92y.onrender.com/api/ocr', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             })
             .then(response => {
+                clearTimeout(timeoutId);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`เซิร์ฟเวอร์ OCR ไม่พร้อมใช้งาน (${response.status})`);
                 }
                 return response.json();
             })
@@ -1406,19 +1422,20 @@
                 // Hide loading screen
                 hideLoadingScreen();
                 
-                if (result.success) {
+                if (result && result.success) {
                     // Process the API response
                     processAPIResponse(result.data);
                 } else {
-                    throw new Error(result.message || 'OCR processing failed');
+                    throw new Error(result?.message || 'ไม่สามารถประมวลผลภาพได้');
                 }
             })
             .catch(error => {
+                clearTimeout(timeoutId);
                 console.error('OCR API Error:', error);
                 hideLoadingScreen();
                 
-                // Show error message
-                alert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
+                // Show user-friendly error with fallback option
+                showOCRErrorModal(error.message, file);
             });
             
             // Clear the input so the same file can be selected again
@@ -1585,6 +1602,88 @@
                     }
                 }, 300);
             }
+        }
+
+        // Show OCR error modal with fallback options
+        function showOCRErrorModal(errorMessage, file) {
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.display = 'flex';
+            modal.id = 'ocr-error-modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                        <h2>🚫 น้องชิบะอ่านสลิปไม่ได้</h2>
+                        <span class="close" onclick="hideOCRErrorModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div style="background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <div style="color: #dc3545; font-weight: 600; margin-bottom: 8px;">❌ เกิดข้อผิดพลาด:</div>
+                            <div style="font-size: 14px; line-height: 1.4;">
+                                ${errorMessage}
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <div style="color: #856404; font-weight: 600; margin-bottom: 8px;">💡 แนะนำ:</div>
+                            <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
+                                <li>ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต</li>
+                                <li>ลองถ่ายรูปใหม่ให้ชัดขึ้น</li>
+                                <li>ใช้แสงที่เพียงพอ</li>
+                                <li>หรือกรอกข้อมูลด้วยตนเอง</li>
+                            </ul>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button class="btn" onclick="retryOCR()" style="background: #17a2b8; color: white;">
+                                🔄 ลองใหม่
+                            </button>
+                            <button class="btn btn-primary" onclick="skipOCRAndManualEntry()">
+                                ✏️ กรอกเอง
+                            </button>
+                        </div>
+                        
+                        <button class="btn" onclick="hideOCRErrorModal()" style="background: #6c757d; color: white; margin-top: 8px;">
+                            ❌ ยกเลิก
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentErrorFile = file;
+        }
+
+        // Hide OCR error modal - Make it global
+        window.hideOCRErrorModal = function() {
+            const modal = document.getElementById('ocr-error-modal');
+            if (modal) {
+                modal.remove();
+            }
+            window.currentErrorFile = null;
+        }
+
+        // Retry OCR - Make it global
+        window.retryOCR = function() {
+            hideOCRErrorModal();
+            if (window.currentErrorFile) {
+                // Simulate file input event
+                const fakeEvent = {
+                    target: {
+                        files: [window.currentErrorFile],
+                        value: ''
+                    }
+                };
+                handleReceiptUpload(fakeEvent);
+            }
+        }
+
+        // Skip OCR and go to manual entry - Make it global
+        window.skipOCRAndManualEntry = function() {
+            hideOCRErrorModal();
+            // Just close the error modal, user can use the manual form
+            alert('🐕 ไม่เป็นไรครับ! ใช้ฟอร์มด้านล่างกรอกข้อมูลเองได้เลย! 📝');
         }
 
         // Show API confirmation modal
@@ -1787,9 +1886,7 @@
             sendToBot(transaction);
             
             // Auto-sync all data to keep everything in sync
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            autoSync();
 
             // Hide modal
             hideAPIResultModal();
@@ -1936,10 +2033,8 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
-            // Sync to bot
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            // Auto-sync to bot
+            autoSync();
             
             // Clear input and refresh display
             document.getElementById('category-name-input').value = '';
@@ -2030,10 +2125,8 @@
             // Save to localStorage
             localStorage.setItem('shiba_categories', JSON.stringify(categories));
             
-            // Sync to bot
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            // Auto-sync to bot
+            autoSync();
             
             // Refresh display
             displayCategories();
@@ -2049,8 +2142,120 @@
             const transaction = transactions.find(t => t.id == transactionId);
             if (!transaction) return;
 
-            // Show edit modal (you can implement this similar to add transaction modal)
-            alert('🚧 ฟีเจอร์แก้ไขกำลังพัฒนา! จะมาเร็วๆ นี้ครับ! 🐾');
+            // Set modal to edit mode
+            window.isEditMode = true;
+            window.editingTransactionId = transactionId;
+
+            // Fill form with existing data
+            document.getElementById('transaction-type').value = transaction.type;
+            document.getElementById('amount').value = transaction.amount;
+            document.getElementById('description').value = transaction.detail || '';
+            document.getElementById('date').value = transaction.date.split('T')[0];
+
+            // Update current transaction type and categories
+            currentTransactionType = transaction.type;
+            updateCategoryOptions();
+            
+            // Set category after options are updated
+            setTimeout(() => {
+                document.getElementById('category').value = transaction.category;
+            }, 100);
+
+            // Update modal title
+            const modalTitle = document.querySelector('#add-transaction-modal .modal-header h2');
+            if (modalTitle) {
+                modalTitle.textContent = '✏️ แก้ไขรายการ';
+            }
+
+            // Update button text
+            const submitButton = document.querySelector('#add-transaction-modal .btn-success');
+            if (submitButton) {
+                submitButton.textContent = '💾 บันทึกการแก้ไข';
+                submitButton.onclick = updateTransaction;
+            }
+
+            // Show modal
+            showAddTransactionModal();
+        }
+
+        // Update transaction function
+        function updateTransaction() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const description = document.getElementById('description').value;
+            const date = document.getElementById('date').value;
+
+            if (!amount || amount <= 0) {
+                alert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
+                return;
+            }
+
+            if (!category) {
+                alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                return;
+            }
+
+            if (!date) {
+                alert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
+                return;
+            }
+
+            // Find and update the transaction
+            const transactionIndex = transactions.findIndex(t => t.id == window.editingTransactionId);
+            if (transactionIndex > -1) {
+                transactions[transactionIndex] = {
+                    ...transactions[transactionIndex],
+                    amount: amount,
+                    type: currentTransactionType,
+                    category: category,
+                    detail: description,
+                    date: new Date(date).toISOString()
+                };
+
+                // Save to localStorage
+                localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
+                
+                // Auto-sync to bot
+                autoSync();
+
+                // Reset modal
+                resetAddTransactionModal();
+                hideAddTransactionModal();
+                
+                // Update displays
+                updateSummary();
+                displayTransactions();
+                
+                alert('🎉 แก้ไขรายการเรียบร้อยแล้วครับ! 🐾');
+            }
+        }
+
+        // Reset modal to add mode
+        function resetAddTransactionModal() {
+            window.isEditMode = false;
+            window.editingTransactionId = null;
+
+            // Reset modal title
+            const modalTitle = document.querySelector('#add-transaction-modal .modal-header h2');
+            if (modalTitle) {
+                modalTitle.textContent = '💰 เพิ่มรายการใหม่';
+            }
+
+            // Reset button
+            const submitButton = document.querySelector('#add-transaction-modal .btn-success');
+            if (submitButton) {
+                submitButton.textContent = '🎉 บันทึกเลย! น้องชิบะพร้อมแล้ว';
+                submitButton.onclick = addTransaction;
+            }
+
+            // Clear form
+            document.getElementById('amount').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('transaction-type').value = 'expense';
+            currentTransactionType = 'expense';
+            updateCategoryOptions();
         }
 
         window.deleteTransaction = function(transactionId) {
@@ -2070,10 +2275,8 @@
             // Save to localStorage
             localStorage.setItem('shiba_transactions', JSON.stringify(transactions));
             
-            // Sync to bot
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            // Auto-sync to bot
+            autoSync();
             
             // Refresh displays
             displayTransactions();
@@ -2163,10 +2366,8 @@
             // Save to localStorage
             localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
             
-            // Sync all data to bot
-            setTimeout(() => {
-                syncAllDataToBot();
-            }, 500);
+            // Auto-sync all data to bot
+            autoSync();
 
             displayBudgets();
             hideSetBudgetForm();
@@ -2541,5 +2742,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966cfb113446d32d',t:'MTc1Mzc5NTkzMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966d031c618b272b',t:'MTc1Mzc5NjI1OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
