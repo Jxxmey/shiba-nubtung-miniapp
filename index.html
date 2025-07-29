@@ -498,8 +498,7 @@
                 renderSetBudgetPage();
                 budgetAmountInput.value = ''; // Clear input field
             }
-            // Adjust WebApp viewport
-            Telegram.WebApp.viewportChanged();
+            // Removed: Telegram.WebApp.viewportChanged(); // This line caused the error
         }
 
         // Function to show messages (similar to Telegram.WebApp.showAlert but in-app)
