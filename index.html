@@ -904,9 +904,15 @@
 
     <script type="module">
         // Initialize Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        let tg;
+        try {
+            tg = window.Telegram?.WebApp || {};
+            if (tg.ready) tg.ready();
+            if (tg.expand) tg.expand();
+        } catch (e) {
+            console.log('Telegram WebApp not available:', e);
+            tg = {}; // Fallback empty object
+        }
 
         // Global variables
         let currentTransactionType = 'expense';
@@ -923,7 +929,7 @@
         function init() {
             try {
                 // Get user info from Telegram
-                if (tg.initDataUnsafe?.user) {
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                     userId = tg.initDataUnsafe.user.id;
                     userInfo = {
                         id: tg.initDataUnsafe.user.id,
@@ -958,10 +964,16 @@
                 loadLocalData();
                 
                 // Set up main button
-                if (tg && tg.MainButton) {
-                    tg.MainButton.setText('ปิด');
-                    tg.MainButton.onClick(() => tg.close());
-                    tg.MainButton.show();
+                try {
+                    if (tg && tg.MainButton) {
+                        tg.MainButton.setText('ปิด');
+                        tg.MainButton.onClick(() => {
+                            if (tg.close) tg.close();
+                        });
+                        tg.MainButton.show();
+                    }
+                } catch (e) {
+                    console.log('MainButton not available:', e);
                 }
 
                 // Update header with user name
@@ -1193,8 +1205,12 @@
             
             // Close the mini app
             setTimeout(() => {
-                if (tg && tg.close) {
-                    tg.close();
+                try {
+                    if (tg && typeof tg.close === 'function') {
+                        tg.close();
+                    }
+                } catch (e) {
+                    console.log('Cannot close app:', e);
                 }
             }, 1000);
         }
@@ -1209,8 +1225,11 @@
 
             // Send data to bot
             try {
-                if (tg && tg.sendData) {
+                if (tg && typeof tg.sendData === 'function') {
                     tg.sendData(JSON.stringify(data));
+                    console.log('Data sent to bot:', data);
+                } else {
+                    console.log('Telegram sendData not available, data:', data);
                 }
             } catch (e) {
                 console.log('Cannot send data to bot:', e);
@@ -1994,8 +2013,13 @@
                 category: category,
                 amount: amount
             };
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify(data));
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(data));
+                    console.log('Budget data sent to bot:', data);
+                }
+            } catch (e) {
+                console.log('Cannot send budget data to bot:', e);
             }
 
             displayBudgets();
@@ -2109,8 +2133,12 @@
                 month: currentMonth,
                 year: currentYear
             };
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify(data));
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(data));
+                }
+            } catch (e) {
+                console.log('Cannot send monthly report request:', e);
             }
         }
 
@@ -2160,8 +2188,12 @@
                 user_id: userId,
                 date: today
             };
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify(data));
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(data));
+                }
+            } catch (e) {
+                console.log('Cannot send daily report request:', e);
             }
         }
 
@@ -2245,8 +2277,12 @@
                 last_month: lastMonth,
                 last_month_year: lastMonthYear
             };
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify(data));
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(data));
+                }
+            } catch (e) {
+                console.log('Cannot send comparison report request:', e);
             }
         }
 
@@ -2311,14 +2347,18 @@
                 month: currentMonth,
                 year: currentYear
             };
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify(data));
+            try {
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(data));
+                }
+            } catch (e) {
+                console.log('Cannot send category report request:', e);
             }
         }
 
         // Handle data from bot (when app is opened with data)
-        if (tg.initDataUnsafe?.start_param) {
-            try {
+        try {
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
                 const data = JSON.parse(decodeURIComponent(tg.initDataUnsafe.start_param));
                 if (data.transactions) {
                     transactions = data.transactions;
@@ -2332,9 +2372,9 @@
                     budgets = data.budgets;
                     localStorage.setItem('shiba_budgets', JSON.stringify(budgets));
                 }
-            } catch (e) {
-                console.log('No initial data provided');
             }
+        } catch (e) {
+            console.log('No initial data provided or error parsing:', e);
         }
     </script>
 
@@ -2348,5 +2388,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966cd24c331a7b54',t:'MTc1Mzc5NDI2MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ce9b5407cd038',t:'MTc1Mzc5NTIxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
