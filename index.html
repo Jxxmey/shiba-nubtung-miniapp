@@ -6,6 +6,7 @@
     <title>🐕 Shiba Bot - เพื่อนจัดการเงินของคุณ</title>
     <meta name="description" content="น้องชิบะจะช่วยดูแลการเงินของคุณ! 🐾">
     <meta name="theme-color" content="#FF8C42">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline';">
     
     <!-- PWA Support -->
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2hpYmEgQm90IC0g4LmA4Lie4Li34LmI4Lit4LiZ4LiI4Lix4LiU4LiB4Liy4Lij4LmA4LiH4Li04LiZ4LiC4Lit4LiH4LiE4Li44LiTIiwic2hvcnRfbmFtZSI6IlNoaWJhIEJvdCIsInN0YXJ0X3VybCI6Ii8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjRkY4QzQyIiwidGhlbWVfY29sb3IiOiIjRkY4QzQyIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjNhV1IwYUQwaU1USTRJaUJvWldsbmFIUTlJakV5T0NJZ2RtbGxkMEp2ZUQwaU1DQXdJREV5T0NBeU9EZ2lJSGh0Ykc1elBTSm9kSFJ3T2k4dmQzZDNMbmN6TG05eVp5OHlNREF3TDNOMlp5SStQR05wY21Oc1pTQmplRDBpTmpRaUlHTjVQU0kyTkNJZ2NqMGlOVEFpSUdacGJHdzlJaU5HUmpoRE5ESWlMejQ4ZEdWNGRDQjRQU0kyTkNJZ2VUMGlOekFpSUdacGJHdzlJaU5tWm1ZaUlHWnZiblF0YzJsNlpUMGlNVGdpSUdadmJuUXRabUZ0YVd4NVBTSnRiMjV2YzNCaFkyVWlJSFJsZUhRdFlXNWphRzl5UFNKdGFXUmtiR1VpUGlCOElEeDBjM0JoYmlCNFBTSTJOQ0lnZVQwaU9EQWlQaUE4TDNSemNHRnVQaUE4TDNSbGVIUStQQzl6ZG1jKyIsInNpemVzIjoiMTI4eDEyOCIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
@@ -617,6 +618,29 @@
                 <span class="close" onclick="hideAddTransactionModal()">&times;</span>
             </div>
             <div class="modal-body">
+                <!-- Receipt Upload Section -->
+                <div style="background: rgba(33, 150, 243, 0.05); border: 2px dashed #2196F3; border-radius: 16px; padding: 24px; margin-bottom: 24px; text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
+                    <div style="font-weight: 600; color: #2196F3; margin-bottom: 8px; font-size: 18px;">
+                        🐕 มีใบเสร็จมั้ยครับ?
+                    </div>
+                    <div style="color: #666; margin-bottom: 16px; font-size: 14px;">
+                        น้องชิบะจะช่วยอ่านและกรอกข้อมูลให้เลย!
+                    </div>
+                    <label for="receipt-upload" class="btn camera-btn" style="margin: 0; cursor: pointer; display: inline-block; text-align: center; width: auto; padding: 12px 24px;">
+                        📸 ถ่ายรูปใบเสร็จ
+                    </label>
+                    <input type="file" id="receipt-upload" accept="image/*" style="display: none;" onchange="handleReceiptUpload(event)">
+                </div>
+
+                <!-- Divider -->
+                <div style="display: flex; align-items: center; margin: 24px 0;">
+                    <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, #ddd, transparent);"></div>
+                    <div style="padding: 0 16px; color: #666; font-size: 14px; font-weight: 500;">หรือกรอกเอง</div>
+                    <div style="flex: 1; height: 1px; background: linear-gradient(to left, transparent, #ddd, transparent);"></div>
+                </div>
+
+                <!-- Manual Form Section -->
                 <div class="form-group">
                     <label>🐕 น้องชิบะอยากรู้ว่าเป็นเงินเข้าหรือออกครับ?</label>
                     <div class="tab-container">
@@ -652,12 +676,6 @@
                     <input type="date" id="date">
                 </div>
 
-                <div class="form-group">
-                    <label for="receipt-upload" class="btn camera-btn" style="margin: 0; cursor: pointer; display: inline-block; text-align: center;">
-                        📄 ให้น้องชิบะดูใบเสร็จหน่อย!
-                    </label>
-                    <input type="file" id="receipt-upload" accept="image/*" style="display: none;" onchange="handleReceiptUpload(event)">
-                </div>
                 <button class="btn btn-success" onclick="addTransaction()">🎉 บันทึกเลย! น้องชิบะพร้อมแล้ว</button>
             </div>
         </div>
@@ -762,32 +780,42 @@
 
         // Initialize the app
         function init() {
-            // Get user ID from Telegram
-            userId = tg.initDataUnsafe?.user?.id;
-            
-            // Set today's date as default
-            document.getElementById('date').valueAsDate = new Date();
-            
-            // Load categories
-            updateCategoryOptions();
-            updateBudgetCategoryOptions();
-            
-            // Load data
-            loadTransactions();
-            loadBudgets();
-            
-            // Set up main button
-            tg.MainButton.setText('ปิด');
-            tg.MainButton.onClick(() => tg.close());
-            tg.MainButton.show();
+            try {
+                // Get user ID from Telegram
+                userId = tg.initDataUnsafe?.user?.id || 'demo_user';
+                
+                // Set today's date as default
+                document.getElementById('date').valueAsDate = new Date();
+                
+                // Load categories
+                updateCategoryOptions();
+                updateBudgetCategoryOptions();
+                
+                // Load data
+                loadTransactions();
+                loadBudgets();
+                
+                // Set up main button
+                if (tg.MainButton) {
+                    tg.MainButton.setText('ปิด');
+                    tg.MainButton.onClick(() => tg.close());
+                    tg.MainButton.show();
+                }
 
-            // Auto-sync with bot on startup
-            requestDataFromBot();
-            
-            // Set up periodic auto-sync every 30 seconds
-            setInterval(() => {
-                requestDataFromBot();
-            }, 30000);
+                // Auto-sync with bot on startup (only if in Telegram)
+                if (window.Telegram && window.Telegram.WebApp) {
+                    requestDataFromBot();
+                    
+                    // Set up periodic auto-sync every 30 seconds
+                    setInterval(() => {
+                        requestDataFromBot();
+                    }, 30000);
+                }
+            } catch (e) {
+                console.log('Initialization error:', e);
+                // Continue with demo mode
+                userId = 'demo_user';
+            }
         }
 
         // Tab switching
@@ -961,13 +989,14 @@
                 
                 // For demo purposes, simulate receipt processing
                 setTimeout(() => {
-                    // This would normally be handled by the bot's response
-                    tg.showAlert('✨ เสร็จแล้วครับ! น้องชิบะอ่านใบเสร็จได้แล้ว ลองดูข้อมูลที่เติมให้นะครับ! 🎯');
-                    
-                    // Example: Auto-fill some fields (in real app, this would come from OCR)
-                    document.getElementById('amount').value = '150.00';
-                    document.getElementById('category').value = 'ค่าอาหาร';
-                    document.getElementById('description').value = '🧾 น้องชิบะอ่านจากใบเสร็จ: ' + file.name;
+                    processOCRResult({
+                        amount: 50.00,
+                        merchant: 'ร้านอาหาร ABC',
+                        date: new Date().toISOString(),
+                        reference: 'c. 8419',
+                        items: ['ข้าวผัด', 'น้ำดื่ม'],
+                        file_name: file.name
+                    });
                 }, 2000);
             };
             
@@ -975,6 +1004,237 @@
             
             // Clear the input so the same file can be selected again
             event.target.value = '';
+        }
+
+        // Process OCR result and show selection modal
+        function processOCRResult(ocrData) {
+            // Show OCR result in chat format first
+            showOCRConfirmationModal(ocrData);
+        }
+
+        // Show OCR confirmation modal (chat format)
+        function showOCRConfirmationModal(ocrData) {
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.display = 'flex';
+            modal.id = 'ocr-confirmation-modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>🐕 น้องชิบะอ่านสลิปได้แล้ว!</h2>
+                        <span class="close" onclick="hideOCRConfirmationModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div style="background: rgba(33, 150, 243, 0.1); border: 1px solid #2196F3; border-radius: 12px; padding: 20px; margin-bottom: 20px; font-family: monospace;">
+                            <div style="color: #2196F3; font-weight: 600; margin-bottom: 12px;">🤖 น้องชิบะอ่านสลิปได้ข้อมูลประมาณนี้ฮับ:</div>
+                            <div style="margin-bottom: 8px; line-height: 1.6;">
+                                <strong>ยอดเงิน:</strong> ${ocrData.amount.toFixed(2)} บาท<br>
+                                <strong>วันที่/เวลา:</strong> ${formatDateTimeForOCR(ocrData.date)}<br>
+                                ${ocrData.reference ? `<strong>เลขที่อ้างอิง:</strong> ${ocrData.reference}<br>` : ''}
+                                ${ocrData.merchant ? `<strong>ร้านค้า:</strong> ${ocrData.merchant}<br>` : ''}
+                            </div>
+                            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(33, 150, 243, 0.2); color: #2196F3; font-weight: 600;">
+                                🤔 ยอดเงินถูกต้องไหมฮับ?
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button class="btn btn-success" onclick="confirmOCRAmount()">✅ ถูกต้อง!</button>
+                            <button class="btn" onclick="editOCRAmount()" style="background: #ff9800; color: white;">✏️ แก้ไข</button>
+                        </div>
+                        
+                        <button class="btn" onclick="hideOCRConfirmationModal()" style="background: #6c757d; color: white; margin-top: 8px;">❌ ยกเลิก</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.ocrData = ocrData;
+        }
+
+        // Format date time for OCR display
+        function formatDateTimeForOCR(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // Confirm OCR amount and proceed to category selection
+        function confirmOCRAmount() {
+            hideOCRConfirmationModal();
+            showOCRResultModal(window.ocrData);
+        }
+
+        // Edit OCR amount
+        function editOCRAmount() {
+            const newAmount = prompt('🐕 ใส่ยอดเงินที่ถูกต้องครับ:', window.ocrData.amount);
+            if (newAmount && !isNaN(parseFloat(newAmount))) {
+                window.ocrData.amount = parseFloat(newAmount);
+                hideOCRConfirmationModal();
+                showOCRResultModal(window.ocrData);
+            }
+        }
+
+        // Hide OCR confirmation modal
+        function hideOCRConfirmationModal() {
+            const modal = document.getElementById('ocr-confirmation-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Show OCR result modal
+        function showOCRResultModal(ocrData) {
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.display = 'flex';
+            modal.id = 'ocr-result-modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>🧾 น้องชิบะอ่านใบเสร็จได้แล้ว!</h2>
+                        <span class="close" onclick="hideOCRResultModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div style="background: rgba(76, 175, 80, 0.1); border: 1px solid #4CAF50; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <div style="font-weight: 600; color: #4CAF50; margin-bottom: 12px;">📋 ข้อมูลที่อ่านได้:</div>
+                            <div style="margin-bottom: 8px;"><strong>💰 จำนวนเงิน:</strong> ฿${ocrData.amount.toLocaleString()}</div>
+                            <div style="margin-bottom: 8px;"><strong>🏪 ร้านค้า:</strong> ${ocrData.merchant}</div>
+                            <div style="margin-bottom: 8px;"><strong>📅 วันที่:</strong> ${formatDate(ocrData.date)}</div>
+                            ${ocrData.items ? `<div style="margin-bottom: 8px;"><strong>🛍️ รายการ:</strong> ${ocrData.items.join(', ')}</div>` : ''}
+                        </div>
+
+                        <div class="form-group">
+                            <label>🐕 น้องชิบะอยากรู้ว่าเป็นเงินเข้าหรือออกครับ?</label>
+                            <div class="tab-container">
+                                <div class="tab" onclick="selectOCRTransactionType('income')">💚 เงินเข้า</div>
+                                <div class="tab active" onclick="selectOCRTransactionType('expense')">💸 เงินออก</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>🏷️ เลือกหมวดหมู่ที่เหมาะสมครับ</label>
+                            <select id="ocr-category">
+                                <option value="">🤔 เลือกหมวดหมู่กันเถอะ</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>📝 เพิ่มเติมอะไรมั้ยครับ?</label>
+                            <textarea id="ocr-description" rows="2" placeholder="🐾 เล่าให้น้องชิบะฟังหน่อย...">${ocrData.items ? '🧾 ' + ocrData.items.join(', ') + ' (' + ocrData.file_name + ')' : '🧾 จากใบเสร็จ: ' + ocrData.file_name}</textarea>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button class="btn" onclick="hideOCRResultModal()" style="background: #6c757d; color: white;">❌ ยกเลิก</button>
+                            <button class="btn btn-success" onclick="confirmOCRTransaction()">✅ บันทึกเลย!</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Set default values
+            window.ocrData = ocrData;
+            window.ocrTransactionType = 'expense'; // Default to expense
+            
+            // Update category options for expense
+            updateOCRCategoryOptions('expense');
+            
+            // Auto-select suggested category
+            const categorySelect = document.getElementById('ocr-category');
+            if (ocrData.merchant && ocrData.merchant.includes('อาหาร')) {
+                categorySelect.value = 'ค่าอาหาร';
+            } else if (ocrData.merchant && ocrData.merchant.includes('ปตท')) {
+                categorySelect.value = 'ค่าเดินทาง';
+            }
+        }
+
+        // Select transaction type in OCR modal
+        function selectOCRTransactionType(type) {
+            window.ocrTransactionType = type;
+            
+            // Update tab appearance
+            const tabs = document.querySelectorAll('#ocr-result-modal .tab-container .tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update category options
+            updateOCRCategoryOptions(type);
+        }
+
+        // Update category options in OCR modal
+        function updateOCRCategoryOptions(type) {
+            const categorySelect = document.getElementById('ocr-category');
+            const categoryKey = type === 'income' ? 'รายรับ' : 'รายจ่าย';
+            
+            categorySelect.innerHTML = '<option value="">🤔 เลือกหมวดหมู่กันเถอะ</option>';
+            
+            categories[categoryKey].forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        // Confirm OCR transaction
+        function confirmOCRTransaction() {
+            const category = document.getElementById('ocr-category').value;
+            const description = document.getElementById('ocr-description').value;
+
+            if (!category) {
+                tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                return;
+            }
+
+            const transaction = {
+                id: Date.now(),
+                type: window.ocrTransactionType,
+                amount: window.ocrData.amount,
+                category: category,
+                description: description,
+                date: window.ocrData.date,
+                timestamp: new Date().toISOString(),
+                source: 'ocr'
+            };
+
+            // Add to transactions
+            transactions.unshift(transaction);
+            saveTransactions();
+
+            // Send to bot
+            sendToBot(transaction);
+
+            // Hide modal
+            hideOCRResultModal();
+
+            // Show success and switch to history
+            tg.showAlert('🎉 เย้! น้องชิบะบันทึกจากใบเสร็จให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            switchTab('history');
+
+            // Auto-sync
+            setTimeout(() => {
+                requestDataFromBot();
+            }, 1000);
+        }
+
+        // Hide OCR result modal
+        function hideOCRResultModal() {
+            const modal = document.getElementById('ocr-result-modal');
+            if (modal) {
+                modal.remove();
+            }
+            window.ocrData = null;
+            window.ocrTransactionType = null;
         }
 
         // Load transactions
@@ -1074,11 +1334,17 @@
 
         // Request data from bot
         function requestDataFromBot() {
-            const data = {
-                action: 'get_user_data',
-                user_id: userId
-            };
-            tg.sendData(JSON.stringify(data));
+            if (userId) {
+                const data = {
+                    action: 'get_user_data',
+                    user_id: userId
+                };
+                try {
+                    tg.sendData(JSON.stringify(data));
+                } catch (e) {
+                    console.log('Cannot send data to bot:', e);
+                }
+            }
         }
 
 
@@ -1502,5 +1768,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9668c34f143dee56',t:'MTc1Mzc1MTcwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9668d55735dcee29',t:'MTc1Mzc1MjQ0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
