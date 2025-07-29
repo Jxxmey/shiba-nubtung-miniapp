@@ -6,7 +6,7 @@
     <title>🐕 Shiba Bot - เพื่อนจัดการเงินของคุณ</title>
     <meta name="description" content="น้องชิบะจะช่วยดูแลการเงินของคุณ! 🐾">
     <meta name="theme-color" content="#FF8C42">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://ocr-slip.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self' https://ocr-slip.onrender.com;">
     
     <!-- PWA Support -->
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2hpYmEgQm90IC0g4LmA4Lie4Li34LmI4Lit4LiZ4LiI4Lix4LiU4LiB4Liy4Lij4LmA4LiH4Li04LiZ4LiC4Lit4LiH4LiE4Li44LiTIiwic2hvcnRfbmFtZSI6IlNoaWJhIEJvdCIsInN0YXJ0X3VybCI6Ii8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjRkY4QzQyIiwidGhlbWVfY29sb3IiOiIjRkY4QzQyIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjNhV1IwYUQwaU1USTRJaUJvWldsbmFIUTlJakV5T0NJZ2RtbGxkMEp2ZUQwaU1DQXdJREV5T0NBeU9EZ2lJSGh0Ykc1elBTSm9kSFJ3T2k4dmQzZDNMbmN6TG05eVp5OHlNREF3TDNOMlp5SStQR05wY21Oc1pTQmplRDBpTmpRaUlHTjVQU0kyTkNJZ2NqMGlOVEFpSUdacGJHdzlJaU5HUmpoRE5ESWlMejQ4ZEdWNGRDQjRQU0kyTkNJZ2VUMGlOekFpSUdacGJHdzlJaU5tWm1ZaUlHWnZiblF0YzJsNlpUMGlNVGdpSUdadmJuUXRabUZ0YVd4NVBTSnRiMjV2YzNCaFkyVWlJSFJsZUhRdFlXNWphRzl5UFNKdGFXUmtiR1VpUGlCOElEeDBjM0JoYmlCNFBTSTJOQ0lnZVQwaU9EQWlQaUE4TDNSemNHRnVQaUE4TDNSbGVIUStQQzl6ZG1jKyIsInNpemVzIjoiMTI4eDEyOCIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
@@ -622,13 +622,13 @@
                 <div style="background: rgba(33, 150, 243, 0.05); border: 2px dashed #2196F3; border-radius: 16px; padding: 24px; margin-bottom: 24px; text-align: center;">
                     <div style="font-size: 48px; margin-bottom: 12px;">📄</div>
                     <div style="font-weight: 600; color: #2196F3; margin-bottom: 8px; font-size: 18px;">
-                        🐕 มีสลิปมั้ยครับ?
+                        🐕 มีใบเสร็จมั้ยครับ?
                     </div>
                     <div style="color: #666; margin-bottom: 16px; font-size: 14px;">
                         น้องชิบะจะช่วยอ่านและกรอกข้อมูลให้เลย!
                     </div>
                     <label for="receipt-upload" class="btn camera-btn" style="margin: 0; cursor: pointer; display: inline-block; text-align: center; width: auto; padding: 12px 24px;">
-                        📸 ถ่ายรูปสลิป
+                        📸 ถ่ายรูปใบเสร็จ
                     </label>
                     <input type="file" id="receipt-upload" accept="image/*" style="display: none;" onchange="handleReceiptUpload(event)">
                 </div>
@@ -785,7 +785,10 @@
                 userId = tg.initDataUnsafe?.user?.id || 'demo_user';
                 
                 // Set today's date as default
-                document.getElementById('date').valueAsDate = new Date();
+                const dateInput = document.getElementById('date');
+                if (dateInput) {
+                    dateInput.valueAsDate = new Date();
+                }
                 
                 // Load categories
                 updateCategoryOptions();
@@ -796,14 +799,14 @@
                 loadBudgets();
                 
                 // Set up main button
-                if (tg.MainButton) {
+                if (tg && tg.MainButton) {
                     tg.MainButton.setText('ปิด');
                     tg.MainButton.onClick(() => tg.close());
                     tg.MainButton.show();
                 }
 
                 // Auto-sync with bot on startup (only if in Telegram)
-                if (window.Telegram && window.Telegram.WebApp) {
+                if (window.Telegram && window.Telegram.WebApp && tg.initDataUnsafe) {
                     requestDataFromBot();
                     
                     // Set up periodic auto-sync every 30 seconds
@@ -815,6 +818,20 @@
                 console.log('Initialization error:', e);
                 // Continue with demo mode
                 userId = 'demo_user';
+                
+                // Set today's date as default in demo mode
+                const dateInput = document.getElementById('date');
+                if (dateInput) {
+                    dateInput.valueAsDate = new Date();
+                }
+                
+                // Load categories in demo mode
+                updateCategoryOptions();
+                updateBudgetCategoryOptions();
+                
+                // Load data in demo mode
+                loadTransactions();
+                loadBudgets();
             }
         }
 
@@ -866,9 +883,16 @@
             currentTransactionType = type;
             
             // Update buttons
-            const tabs = document.querySelectorAll('#add-content .tab-container .tab');
+            const tabs = document.querySelectorAll('#add-transaction-modal .tab-container .tab');
             tabs.forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            // Find and activate the correct tab
+            tabs.forEach(tab => {
+                if ((type === 'income' && tab.textContent.includes('เงินเข้า')) ||
+                    (type === 'expense' && tab.textContent.includes('เงินออก'))) {
+                    tab.classList.add('active');
+                }
+            });
             
             // Update categories
             updateCategoryOptions();
@@ -902,17 +926,29 @@
             const date = document.getElementById('date').value;
 
             if (!amount || amount <= 0) {
-                tg.showAlert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
+                } else {
+                    alert('🐕 น้องชิบะงงแล้ว! ลืมใส่จำนวนเงินรึเปล่าครับ? 💰');
+                }
                 return;
             }
 
             if (!category) {
-                tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                } else {
+                    alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                }
                 return;
             }
 
             if (!date) {
-                tg.showAlert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
+                } else {
+                    alert('📅 น้องชิบะจำไม่ได้แล้ว! เลือกวันที่ให้หน่อยครับ! 🗓️');
+                }
                 return;
             }
 
@@ -945,7 +981,11 @@
             
             // Hide modal and show success
             hideAddTransactionModal();
-            tg.showAlert('🎉 เย้! น้องชิบะบันทึกให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            if (tg && tg.showAlert) {
+                tg.showAlert('🎉 เย้! น้องชิบะบันทึกให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            } else {
+                alert('🎉 เย้! น้องชิบะบันทึกให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            }
             
             // Switch to history tab
             switchTab('history');
@@ -961,7 +1001,13 @@
 
             // In a real implementation, this would send data to your bot
             // For now, we'll use Telegram's sendData method
-            tg.sendData(JSON.stringify(data));
+            try {
+                if (tg && tg.sendData) {
+                    tg.sendData(JSON.stringify(data));
+                }
+            } catch (e) {
+                console.log('Cannot send data to bot:', e);
+            }
         }
 
         // Handle receipt upload
@@ -971,7 +1017,11 @@
 
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                tg.showAlert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
+                } else {
+                    alert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
+                }
                 return;
             }
 
@@ -1007,7 +1057,11 @@
                 hideLoadingScreen();
                 
                 // Show error message
-                tg.showAlert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
+                } else {
+                    alert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
+                }
             });
             
             // Clear the input so the same file can be selected again
@@ -1351,7 +1405,11 @@
             const description = document.getElementById('api-description').value;
 
             if (!category) {
-                tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                } else {
+                    alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
+                }
                 return;
             }
 
@@ -1392,7 +1450,11 @@
             hideAPIResultModal();
 
             // Show success and switch to history
-            tg.showAlert('🎉 เย้! น้องชิบะบันทึกจาก OCR API ให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            if (tg && tg.showAlert) {
+                tg.showAlert('🎉 เย้! น้องชิบะบันทึกจาก OCR API ให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            } else {
+                alert('🎉 เย้! น้องชิบะบันทึกจาก OCR API ให้แล้วนะครับ! เก่งมากเลย! 🐾');
+            }
             switchTab('history');
 
             // Auto-sync
@@ -1943,5 +2005,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9669a1931751d038',t:'MTc1Mzc2MDgwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9669aae8d488d329',t:'MTc1Mzc2MTE4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
