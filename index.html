@@ -730,10 +730,10 @@
                 <!-- Manual Form Section -->
                 <div class="form-group">
                     <label>🐕 น้องชิบะอยากรู้ว่าเป็นเงินเข้าหรือออกครับ?</label>
-                    <div class="tab-container">
-                        <div class="tab active" onclick="switchTransactionType('income')">💚 เงินเข้า</div>
-                        <div class="tab" onclick="switchTransactionType('expense')">💸 เงินออก</div>
-                    </div>
+                    <select id="transaction-type" style="width: 100%; padding: 14px; border: 2px solid rgba(255, 140, 66, 0.2); border-radius: 12px; font-size: 16px; background: rgba(255, 255, 255, 0.9); color: #5D4037;">
+                        <option value="expense">💸 เงินออก</option>
+                        <option value="income">💚 เงินเข้า</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -860,13 +860,13 @@
         <div id="set-budget-form" style="display: none;">
             <div class="form-group">
                 <label>หมวดหมู่รายจ่าย</label>
-                <select id="budget-category">
+                <select id="budget-category" style="width: 100%; padding: 14px; border: 2px solid rgba(255, 140, 66, 0.2); border-radius: 12px; font-size: 16px; background: rgba(255, 255, 255, 0.9); color: #5D4037;">
                     <option value="">เลือกหมวดหมู่</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>จำนวนงบประมาณ (บาท)</label>
-                <input type="number" id="budget-amount" placeholder="0.00" step="0.01" min="0">
+                <input type="number" id="budget-amount" placeholder="0.00" step="0.01" min="0" style="width: 100%; padding: 14px; border: 2px solid rgba(255, 140, 66, 0.2); border-radius: 12px; font-size: 16px; background: rgba(255, 255, 255, 0.9); color: #5D4037;">
             </div>
             <div class="form-group">
                 <button class="btn btn-success" onclick="setBudget()">บันทึกงบประมาณ</button>
@@ -1096,11 +1096,7 @@
             const newCategoryName = document.getElementById('new-category-name').value.trim();
             
             if (!newCategoryName) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
-                } else {
-                    alert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
-                }
+                alert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
                 return;
             }
 
@@ -1108,11 +1104,7 @@
             
             // Check if category already exists
             if (categories[categoryKey].includes(newCategoryName)) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
-                } else {
-                    alert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
-                }
+                alert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
                 return;
             }
 
@@ -1149,11 +1141,7 @@
                 hideAddCategoryForm();
                 
                 // Show success message
-                if (tg && tg.showAlert) {
-                    tg.showAlert(`🎉 เย้! เพิ่มหมวดหมู่ "${newCategoryName}" เรียบร้อยแล้วครับ! 🐾`);
-                } else {
-                    alert(`🎉 เย้! เพิ่มหมวดหมู่ "${newCategoryName}" เรียบร้อยแล้วครับ! 🐾`);
-                }
+                alert(`🎉 เย้! เพิ่มหมวดหมู่ "${newCategoryName}" เรียบร้อยแล้วครับ! 🐾`);
 
             } catch (error) {
                 console.error('Error adding category:', error);
@@ -1167,11 +1155,7 @@
                 // Save to localStorage as fallback
                 localStorage.setItem('shiba_categories', JSON.stringify(categories));
                 
-                if (tg && tg.showAlert) {
-                    tg.showAlert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
-                } else {
-                    alert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
-                }
+                alert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
             }
         }
 
@@ -1399,11 +1383,7 @@
             }
 
             if (!category) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
-                } else {
-                    alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
-                }
+                alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
                 return;
             }
 
@@ -1491,11 +1471,7 @@
 
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
-                } else {
-                    alert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
-                }
+                alert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
                 return;
             }
 
@@ -1533,11 +1509,7 @@
                 hideLoadingScreen();
                 
                 // Show error message
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
-                } else {
-                    alert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
-                }
+                alert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
             });
             
             // Clear the input so the same file can be selected again
@@ -1881,11 +1853,7 @@
             const description = document.getElementById('api-description').value;
 
             if (!category) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
-                } else {
-                    alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
-                }
+                alert('🤔 น้องชิบะอยากรู้ว่าเป็นค่าอะไร เลือกหมวดหมู่ให้หน่อยนะครับ! 🏷️');
                 return;
             }
 
@@ -1934,11 +1902,7 @@
             hideAPIResultModal();
 
             // Show success and switch to history
-            if (tg && tg.showAlert) {
-                tg.showAlert('🎉 เย้! น้องชิบะบันทึกจาก OCR API ให้แล้วนะครับ! เก่งมากเลย! 🐾');
-            } else {
-                alert('🎉 เย้! น้องชิบะบันทึกจาก OCR API ให้แล้วนะครับ! เก่งมากเลย! 🐾');
-            }
+            alert('🎉 เย้! น้องชิบะบันทึกจาก OCR API ให้แล้วนะครับ! เก่งมากเลย! 🐾');
             switchTab('history');
 
             // Auto-sync
@@ -2074,21 +2038,13 @@
             const categoryName = document.getElementById('category-name-input').value.trim();
             
             if (!categoryName) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
-                } else {
-                    alert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
-                }
+                alert('🐕 น้องชิบะงงแล้ว! ใส่ชื่อหมวดหมู่ให้หน่อยครับ! 🏷️');
                 return;
             }
 
             // Check if category already exists
             if (categories[currentCategoryType].includes(categoryName)) {
-                if (tg && tg.showAlert) {
-                    tg.showAlert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
-                } else {
-                    alert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
-                }
+                alert('🤔 หมวดหมู่นี้มีอยู่แล้วนะครับ! ลองใส่ชื่ออื่นดูมั้ย? 🏷️');
                 return;
             }
 
@@ -2122,11 +2078,7 @@
                 updateBudgetCategoryOptions();
                 
                 // Show success message
-                if (tg && tg.showAlert) {
-                    tg.showAlert(`🎉 เย้! เพิ่มหมวดหมู่ "${categoryName}" เรียบร้อยแล้วครับ! 🐾`);
-                } else {
-                    alert(`🎉 เย้! เพิ่มหมวดหมู่ "${categoryName}" เรียบร้อยแล้วครับ! 🐾`);
-                }
+                alert(`🎉 เย้! เพิ่มหมวดหมู่ "${categoryName}" เรียบร้อยแล้วครับ! 🐾`);
 
             } catch (error) {
                 console.error('Error adding category:', error);
@@ -2137,11 +2089,7 @@
                     categories[currentCategoryType].splice(index, 1);
                 }
                 
-                if (tg && tg.showAlert) {
-                    tg.showAlert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
-                } else {
-                    alert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
-                }
+                alert('😅 น้องชิบะเพิ่มหมวดหมู่ไม่ได้ครับ! ลองใหม่อีกครั้งนะ');
             }
         }
 
@@ -2339,8 +2287,19 @@
             }
         }
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', init);
+        // Event listener for transaction type change (to update categories)
+        document.addEventListener('DOMContentLoaded', function() {
+            const transactionTypeSelect = document.getElementById('transaction-type');
+            if (transactionTypeSelect) {
+                transactionTypeSelect.addEventListener('change', () => {
+                    currentTransactionType = transactionTypeSelect.value;
+                    updateCategoryOptions();
+                });
+            }
+            
+            // Initialize the app
+            init();
+        });
 
         // Request data from bot (now handled by MongoDB)
         async function requestDataFromBot() {
@@ -2355,13 +2314,19 @@
             
             budgetCategorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>';
             
-            if (categories['รายจ่าย']) {
-                categories['รายจ่าย'].forEach(category => {
+            if (userCategories.expense && userCategories.expense.length > 0) {
+                userCategories.expense.forEach(category => {
                     const option = document.createElement('option');
                     option.value = category;
                     option.textContent = category;
                     budgetCategorySelect.appendChild(option);
                 });
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'ไม่มีหมวดหมู่รายจ่ายให้ตั้งงบฮับ!';
+                option.disabled = true;
+                budgetCategorySelect.appendChild(option);
             }
         }
 
@@ -2796,5 +2761,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c8fcb874a26cd',t:'MTc1Mzc5MTUzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966cb746f3d926f9',t:'MTc1Mzc5MzE1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
