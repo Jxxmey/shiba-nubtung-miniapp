@@ -969,16 +969,25 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Show loading notification
-            showLoadingNotification("น้องชิบะกำลังอ่านสลิปให้นะฮับ... 🔍");
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                tg.showAlert('🐕 น้องชิบะรับได้แค่รูปภาพนะครับ! กรุณาเลือกไฟล์รูปภาพ 📸');
+                return;
+            }
 
-            // Create FormData for API request
+            // Show loading screen
+            showLoadingScreen();
+
+            // Create FormData for API request (using 'file' parameter as specified)
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('file', file);
 
-            // Call the OCR API
-            fetch('https://ocr-slip.onrender.com/parse_slip_image', {
+            // Call the OCR API with correct endpoint
+            fetch('https://ocr-slip.onrender.com/parse-slip-image', {
                 method: 'POST',
+                headers: {
+                    'accept': 'application/json'
+                },
                 body: formData
             })
             .then(response => {
@@ -988,19 +997,25 @@
                 return response.json();
             })
             .then(data => {
+                // Hide loading screen
+                hideLoadingScreen();
                 // Process the API response
                 processOCRAPIResponse(data);
             })
             .catch(error => {
                 console.error('OCR API Error:', error);
-                hideLoadingNotification();
+                hideLoadingScreen();
                 
                 // Show error message
                 tg.showAlert('🐕 น้องชิบะอ่านสลิปไม่ได้ครับ! ลองใหม่อีกครั้งนะ 😅\n\nError: ' + error.message);
                 
                 // Fallback to demo mode for testing
                 setTimeout(() => {
-                    simulatePythonResponse();
+                    showLoadingScreen();
+                    setTimeout(() => {
+                        hideLoadingScreen();
+                        simulatePythonResponse();
+                    }, 2000);
                 }, 1000);
             });
             
@@ -1651,52 +1666,144 @@ Txn: BIL111222333
             return response;
         }
 
-        // Show loading notification
-        function showLoadingNotification(message = "น้องชิบะกำลังอ่านสลิป...") {
-            const notification = document.createElement('div');
-            notification.id = 'loading-notification';
-            notification.style.cssText = `
+        // Show full screen loading
+        function showLoadingScreen() {
+            const loadingScreen = document.createElement('div');
+            loadingScreen.id = 'loading-screen';
+            loadingScreen.style.cssText = `
                 position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.9);
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
                 color: white;
-                padding: 24px;
-                border-radius: 16px;
-                text-align: center;
-                z-index: 3000;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                max-width: 300px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                animation: fadeIn 0.3s ease;
             `;
             
-            notification.innerHTML = `
-                <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; line-height: 1.4;">${message}</div>
-                <div style="font-size: 14px; opacity: 0.8;">รอแป๊บนึงนะฮับ! 🐕</div>
-                <div style="margin-top: 16px;">
-                    <div style="width: 40px; height: 4px; background: rgba(255, 255, 255, 0.3); border-radius: 2px; margin: 0 auto; overflow: hidden;">
-                        <div style="width: 100%; height: 100%; background: #FF8C42; border-radius: 2px; animation: loading 2s infinite;"></div>
+            loadingScreen.innerHTML = `
+                <div style="text-align: center; max-width: 300px; padding: 20px;">
+                    <!-- Animated Shiba -->
+                    <div style="font-size: 80px; margin-bottom: 24px; animation: bounce 2s infinite;">🐕</div>
+                    
+                    <!-- Main message -->
+                    <div style="font-size: 24px; font-weight: 700; margin-bottom: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                        น้องชิบะกำลังอ่านสลิป
+                    </div>
+                    
+                    <!-- Sub message -->
+                    <div style="font-size: 16px; opacity: 0.9; margin-bottom: 32px; line-height: 1.4;">
+                        🔍 กำลังวิเคราะห์ข้อมูลจากใบเสร็จ<br>
+                        รอแป๊บนึงนะฮับ!
+                    </div>
+                    
+                    <!-- Progress bar -->
+                    <div style="width: 200px; height: 6px; background: rgba(255, 255, 255, 0.3); border-radius: 3px; margin: 0 auto 16px; overflow: hidden;">
+                        <div style="width: 100%; height: 100%; background: white; border-radius: 3px; animation: progressBar 3s infinite;"></div>
+                    </div>
+                    
+                    <!-- Loading dots -->
+                    <div style="display: flex; justify-content: center; gap: 8px;">
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: loadingDots 1.5s infinite 0s;"></div>
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: loadingDots 1.5s infinite 0.3s;"></div>
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 50%; animation: loadingDots 1.5s infinite 0.6s;"></div>
+                    </div>
+                    
+                    <!-- Fun messages that rotate -->
+                    <div id="loading-messages" style="margin-top: 24px; font-size: 14px; opacity: 0.8; min-height: 40px; display: flex; align-items: center; justify-content: center;">
+                        <div>🤖 กำลังใช้ AI อ่านตัวเลข...</div>
                     </div>
                 </div>
+                
                 <style>
-                    @keyframes loading {
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                    
+                    @keyframes bounce {
+                        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+                        40% { transform: translateY(-20px); }
+                        60% { transform: translateY(-10px); }
+                    }
+                    
+                    @keyframes progressBar {
                         0% { transform: translateX(-100%); }
+                        50% { transform: translateX(0%); }
                         100% { transform: translateX(100%); }
+                    }
+                    
+                    @keyframes loadingDots {
+                        0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+                        30% { opacity: 1; transform: scale(1.2); }
                     }
                 </style>
             `;
             
-            document.body.appendChild(notification);
+            document.body.appendChild(loadingScreen);
+            
+            // Rotate fun messages
+            const messages = [
+                "🤖 กำลังใช้ AI อ่านตัวเลข...",
+                "📄 กำลังสแกนใบเสร็จ...",
+                "🔍 กำลังค้นหายอดเงิน...",
+                "📅 กำลังหาวันที่...",
+                "🔢 กำลังอ่านเลขอ้างอิง...",
+                "✨ เกือบเสร็จแล้วฮับ!"
+            ];
+            
+            let messageIndex = 0;
+            const messageInterval = setInterval(() => {
+                const messageElement = document.getElementById('loading-messages');
+                if (messageElement) {
+                    messageIndex = (messageIndex + 1) % messages.length;
+                    messageElement.innerHTML = `<div>${messages[messageIndex]}</div>`;
+                } else {
+                    clearInterval(messageInterval);
+                }
+            }, 2000);
+            
+            // Store interval ID for cleanup
+            loadingScreen.messageInterval = messageInterval;
         }
 
-        // Hide loading notification
-        function hideLoadingNotification() {
-            const notification = document.getElementById('loading-notification');
-            if (notification) {
-                notification.remove();
+        // Hide loading screen
+        function hideLoadingScreen() {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                // Clear message interval
+                if (loadingScreen.messageInterval) {
+                    clearInterval(loadingScreen.messageInterval);
+                }
+                
+                // Fade out animation
+                loadingScreen.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    if (loadingScreen.parentNode) {
+                        loadingScreen.remove();
+                    }
+                }, 300);
             }
+        }
+
+        // Show loading notification (kept for backward compatibility)
+        function showLoadingNotification(message = "น้องชิบะกำลังอ่านสลิป...") {
+            showLoadingScreen();
+        }
+
+        // Hide loading notification (kept for backward compatibility)
+        function hideLoadingNotification() {
+            hideLoadingScreen();
         }
 
         // Handle real Python OCR response from your perform_ocr and parse_slip_text functions
@@ -2671,5 +2778,5 @@ Txn: BIL111222333
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9669847405147b6e',t:'MTc1Mzc1OTYxNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96699337c0c0d330',t:'MTc1Mzc2MDIxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
