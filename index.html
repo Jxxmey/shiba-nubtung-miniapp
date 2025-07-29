@@ -902,7 +902,7 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
         // Initialize Telegram Web App
         const tg = window.Telegram.WebApp;
         tg.ready();
@@ -936,18 +936,22 @@
                         language_code: tg.initDataUnsafe.user.language_code
                     };
                     
+                    console.log('Bot generated user_id:', userId);
+                    
                     // Initialize user in database
                     await initializeUser();
                 } else {
-                    // Demo mode
-                    userId = 'demo_user';
+                    // Demo mode with auto-generated ID
+                    userId = Math.floor(Math.random() * 9000000000) + 1000000000; // Generate 10-digit ID like 1900395259
                     userInfo = {
-                        id: 'demo_user',
+                        id: userId,
                         first_name: 'Demo',
                         last_name: 'User',
                         username: 'demo_user',
                         language_code: 'th'
                     };
+                    
+                    console.log('Demo mode - generated user_id:', userId);
                 }
                 
                 // Set today's date as default
@@ -992,8 +996,8 @@
             }
         }
 
-        // Tab switching
-        function switchTab(tabName) {
+        // Tab switching - Make it global
+        window.switchTab = function(tabName) {
             // Update tab buttons
             document.querySelectorAll('.tab-container .tab').forEach(tab => {
                 tab.classList.remove('active');
@@ -1017,7 +1021,9 @@
             if (tabName === 'summary') {
                 updateSummary();
             } else if (tabName === 'history') {
-                loadTransactions();
+                (async () => {
+                    await loadTransactions();
+                })();
             } else if (tabName === 'categories') {
                 displayCategories();
             } else if (tabName === 'budget') {
@@ -1038,8 +1044,8 @@
             return tabTexts[tabName] || '';
         }
 
-        // Transaction type switching
-        function switchTransactionType(type) {
+        // Transaction type switching - Make it global
+        window.switchTransactionType = function(type) {
             currentTransactionType = type;
             
             // Update buttons
@@ -1077,20 +1083,20 @@
             }
         }
 
-        // Show add category form
-        function showAddCategoryForm() {
+        // Show add category form - Make it global
+        window.showAddCategoryForm = function() {
             document.getElementById('add-category-form').style.display = 'block';
             document.getElementById('new-category-name').focus();
         }
 
-        // Hide add category form
-        function hideAddCategoryForm() {
+        // Hide add category form - Make it global
+        window.hideAddCategoryForm = function() {
             document.getElementById('add-category-form').style.display = 'none';
             document.getElementById('new-category-name').value = '';
         }
 
-        // Add new category
-        async function addNewCategory() {
+        // Add new category - Make it global
+        window.addNewCategory = async function() {
             const newCategoryName = document.getElementById('new-category-name').value.trim();
             
             if (!newCategoryName) {
@@ -1173,8 +1179,8 @@
             }
         }
 
-        // Set quick amount
-        function setAmount(amount) {
+        // Set quick amount - Make it global
+        window.setAmount = function(amount) {
             document.getElementById('amount').value = amount;
         }
 
@@ -1220,6 +1226,14 @@
                 if (transactionsResponse.ok) {
                     const transactionsData = await transactionsResponse.json();
                     transactions = transactionsData.transactions || [];
+                    
+                    // Show welcome message if no transactions
+                    if (transactions.length === 0) {
+                        showWelcomeMessage();
+                    }
+                } else {
+                    // If user not found, show welcome message
+                    showWelcomeMessage();
                 }
 
                 // Load budgets
@@ -1236,8 +1250,19 @@
                 
             } catch (error) {
                 console.error('Error loading user data:', error);
+                // Show welcome message for new users
+                showWelcomeMessage();
                 // Fallback to localStorage
                 loadDemoData();
+            }
+        }
+
+        function showWelcomeMessage() {
+            const userName = userInfo?.first_name || 'คุณ';
+            if (tg && tg.showAlert) {
+                tg.showAlert(`🎉 ยินดีต้อนรับ ${userName}!\n\n🐕 น้องชิบะพร้อมช่วยจัดการเงินแล้วครับ!\n💰 เริ่มบันทึกรายการแรกกันเลย!`);
+            } else {
+                alert(`🎉 ยินดีต้อนรับ ${userName}!\n\n🐕 น้องชิบะพร้อมช่วยจัดการเงินแล้วครับ!\n💰 เริ่มบันทึกรายการแรกกันเลย!`);
             }
         }
 
@@ -1338,8 +1363,8 @@
             }
         }
 
-        // Add transaction
-        async function addTransaction() {
+        // Add transaction - Make it global
+        window.addTransaction = async function() {
             const amount = parseFloat(document.getElementById('amount').value);
             const category = document.getElementById('category').value;
             const description = document.getElementById('description').value;
@@ -1440,8 +1465,8 @@
             }
         }
 
-        // Handle receipt upload - Updated to use proxy
-        function handleReceiptUpload(event) {
+        // Handle receipt upload - Updated to use proxy - Make it global
+        window.handleReceiptUpload = function(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1720,14 +1745,14 @@
             window.currentApiResponse = apiResponse;
         }
 
-        // Confirm API amount
-        function confirmAPIAmount() {
+        // Confirm API amount - Make it global
+        window.confirmAPIAmount = function() {
             hideAPIConfirmationModal();
             showAPIResultModal(window.currentApiResponse);
         }
 
-        // Edit API amount
-        function editAPIAmount() {
+        // Edit API amount - Make it global
+        window.editAPIAmount = function() {
             const newAmount = prompt('🐕 ใส่ยอดเงินที่ถูกต้องครับ:', window.currentApiResponse.amount || '');
             if (newAmount && !isNaN(parseFloat(newAmount))) {
                 window.currentApiResponse.amount = parseFloat(newAmount);
@@ -1736,8 +1761,8 @@
             }
         }
 
-        // Hide API confirmation modal
-        function hideAPIConfirmationModal() {
+        // Hide API confirmation modal - Make it global
+        window.hideAPIConfirmationModal = function() {
             const modal = document.getElementById('api-confirmation-modal');
             if (modal) {
                 modal.remove();
@@ -1803,8 +1828,8 @@
             updateAPICategoryOptions('expense');
         }
 
-        // Select transaction type in API modal
-        function selectAPITransactionType(type) {
+        // Select transaction type in API modal - Make it global
+        window.selectAPITransactionType = function(type) {
             window.currentApiTransactionType = type;
             
             // Update tab appearance
@@ -1831,8 +1856,8 @@
             });
         }
 
-        // Confirm API transaction
-        function confirmAPITransaction() {
+        // Confirm API transaction - Make it global
+        window.confirmAPITransaction = async function() {
             const category = document.getElementById('api-category').value;
             const description = document.getElementById('api-description').value;
 
@@ -1898,13 +1923,13 @@
             switchTab('history');
 
             // Auto-sync
-            setTimeout(() => {
-                requestDataFromBot();
+            setTimeout(async () => {
+                await requestDataFromBot();
             }, 1000);
         }
 
-        // Hide API result modal
-        function hideAPIResultModal() {
+        // Hide API result modal - Make it global
+        window.hideAPIResultModal = function() {
             const modal = document.getElementById('api-result-modal');
             if (modal) {
                 modal.remove();
@@ -1989,14 +2014,14 @@
             });
         }
 
-        // Modal control functions
-        function showAddTransactionModal() {
+        // Modal control functions - Make them global
+        window.showAddTransactionModal = function() {
             const modal = document.getElementById('add-transaction-modal');
             modal.classList.add('show');
             modal.style.display = 'flex';
         }
 
-        function hideAddTransactionModal() {
+        window.hideAddTransactionModal = function() {
             const modal = document.getElementById('add-transaction-modal');
             modal.classList.remove('show');
             modal.style.display = 'none';
@@ -2018,7 +2043,8 @@
         // Category management functions
         let currentCategoryType = 'รายรับ';
 
-        function setCategoryType(type) {
+        // Make setCategoryType global
+        window.setCategoryType = function(type) {
             currentCategoryType = type;
             
             // Update tab appearance
@@ -2027,7 +2053,8 @@
             event.target.classList.add('active');
         }
 
-        async function addCategoryFromManagement() {
+        // Make addCategoryFromManagement global
+        window.addCategoryFromManagement = async function() {
             const categoryName = document.getElementById('category-name-input').value.trim();
             
             if (!categoryName) {
@@ -2158,7 +2185,8 @@
             container.innerHTML = categoriesHtml;
         }
 
-        async function deleteCategory(type, categoryName) {
+        // Make deleteCategory global
+        window.deleteCategory = async function(type, categoryName) {
             // Check if category is being used in transactions
             const isUsed = transactions.some(t => t.category === categoryName);
             
@@ -2227,8 +2255,8 @@
             }
         }
 
-        // Transaction edit/delete functions
-        async function editTransaction(transactionId) {
+        // Transaction edit/delete functions - Make them global
+        window.editTransaction = async function(transactionId) {
             const transaction = transactions.find(t => (t._id || t.id) == transactionId);
             if (!transaction) return;
 
@@ -2240,7 +2268,7 @@
             }
         }
 
-        async function deleteTransaction(transactionId) {
+        window.deleteTransaction = async function(transactionId) {
             const transaction = transactions.find(t => (t._id || t.id) == transactionId);
             if (!transaction) return;
 
@@ -2321,17 +2349,18 @@
             }
         }
 
-        function showSetBudgetForm() {
+        // Make budget functions global
+        window.showSetBudgetForm = function() {
             document.getElementById('set-budget-form').style.display = 'block';
         }
 
-        function hideSetBudgetForm() {
+        window.hideSetBudgetForm = function() {
             document.getElementById('set-budget-form').style.display = 'none';
             document.getElementById('budget-category').value = '';
             document.getElementById('budget-amount').value = '';
         }
 
-        async function setBudget() {
+        window.setBudget = async function() {
             const category = document.getElementById('budget-category').value;
             const amount = parseFloat(document.getElementById('budget-amount').value);
 
@@ -2464,8 +2493,8 @@
             }).join('');
         }
 
-        // Report functions
-        function generateMonthlyReport() {
+        // Report functions - Make them global
+        window.generateMonthlyReport = function() {
             const currentDate = new Date();
             const currentMonth = currentDate.getMonth();
             const currentYear = currentDate.getFullYear();
@@ -2524,7 +2553,7 @@
             tg.sendData(JSON.stringify(data));
         }
 
-        function generateDailyReport() {
+        window.generateDailyReport = function() {
             const today = new Date().toISOString().split('T')[0];
             const todayTransactions = transactions.filter(t => t.date === today);
 
@@ -2751,5 +2780,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c6ac3a57dd338',t:'MTc1Mzc5MDAxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c7ca563812721',t:'MTc1Mzc5MDc1MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
