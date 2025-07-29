@@ -681,7 +681,7 @@
 <body>
     <div class="header">
         <h1>🐕 น้องชิบะ</h1>
-        <p>🐾 วันนี้เราจะจัดการเงินกันยังไงดีครับ? 💰</p>
+        <p>🐾 พร้อมช่วยจัดการเงินของคุณแล้วครับ! 💰</p>
     </div>
 
     <div class="tab-container">
@@ -936,22 +936,25 @@
                         language_code: tg.initDataUnsafe.user.language_code
                     };
                     
-                    console.log('Bot generated user_id:', userId);
+                    console.log('Telegram user_id:', userId);
                     
                     // Initialize user in database
                     await initializeUser();
                 } else {
-                    // Demo mode with auto-generated ID
-                    userId = Math.floor(Math.random() * 9000000000) + 1000000000; // Generate 10-digit ID like 1900395259
+                    // For testing outside Telegram - generate a unique test user ID
+                    userId = `test_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
                     userInfo = {
                         id: userId,
-                        first_name: 'Demo',
+                        first_name: 'Test',
                         last_name: 'User',
-                        username: 'demo_user',
+                        username: 'test_user',
                         language_code: 'th'
                     };
                     
-                    console.log('Demo mode - generated user_id:', userId);
+                    console.log('Test mode - generated user_id:', userId);
+                    
+                    // Initialize test user in database
+                    await initializeUser();
                 }
                 
                 // Set today's date as default
@@ -974,25 +977,14 @@
                 updateHeaderWithUserInfo();
                 
             } catch (e) {
-                console.log('Initialization error:', e);
-                // Fallback to demo mode
-                userId = 'demo_user';
-                userInfo = {
-                    id: 'demo_user',
-                    first_name: 'Demo',
-                    last_name: 'User',
-                    username: 'demo_user',
-                    language_code: 'th'
-                };
+                console.error('Initialization error:', e);
                 
-                // Set today's date as default in demo mode
-                const dateInput = document.getElementById('date');
-                if (dateInput) {
-                    dateInput.valueAsDate = new Date();
+                // Show error message
+                if (tg && tg.showAlert) {
+                    tg.showAlert('🐕 น้องชิบะเชื่อมต่อไม่ได้ครับ! กรุณาลองใหม่อีกครั้ง');
+                } else {
+                    alert('🐕 น้องชิบะเชื่อมต่อไม่ได้ครับ! กรุณาลองใหม่อีกครั้ง');
                 }
-                
-                // Load demo data (this will also update category options)
-                loadDemoData();
             }
         }
 
@@ -1252,8 +1244,8 @@
                 console.error('Error loading user data:', error);
                 // Show welcome message for new users
                 showWelcomeMessage();
-                // Fallback to localStorage
-                loadDemoData();
+                // Emergency fallback to localStorage
+                loadLocalBackupData();
             }
         }
 
@@ -1266,8 +1258,8 @@
             }
         }
 
-        function loadDemoData() {
-            // Load from localStorage as fallback
+        function loadLocalBackupData() {
+            // Load from localStorage as emergency fallback only
             const savedTransactions = localStorage.getItem('shiba_transactions');
             if (savedTransactions) {
                 transactions = JSON.parse(savedTransactions);
@@ -1955,10 +1947,7 @@
             const container = document.getElementById('transactions-list');
             
             if (transactions.length === 0) {
-                const isDemo = userId === 'demo_user';
-                const message = isDemo 
-                    ? '🐕 โหมดทดลอง - น้องชิบะรออยู่นะครับ!<br>🌟 มาเริ่มบันทึกรายการแรกกันเถอะ!'
-                    : '🐕 น้องชิบะรออยู่นะครับ!<br>🌟 มาเริ่มบันทึกรายการแรกกันเถอะ!<br>💾 ข้อมูลจะถูกบันทึกใน MongoDB';
+                const message = '🐕 น้องชิบะรออยู่นะครับ!<br>🌟 มาเริ่มบันทึกรายการแรกกันเถอะ!<br>💾 ข้อมูลจะถูกบันทึกอย่างปลอดภัย';
                 container.innerHTML = `<div class="empty-state">${message}</div>`;
                 return;
             }
@@ -2602,7 +2591,7 @@
             tg.sendData(JSON.stringify(data));
         }
 
-        function generateComparisonReport() {
+        window.generateComparisonReport = function() {
             const currentDate = new Date();
             const currentMonth = currentDate.getMonth();
             const currentYear = currentDate.getFullYear();
@@ -2685,7 +2674,7 @@
             tg.sendData(JSON.stringify(data));
         }
 
-        function generateCategoryReport() {
+        window.generateCategoryReport = function() {
             const currentDate = new Date();
             const currentMonth = currentDate.getMonth();
             const currentYear = currentDate.getFullYear();
@@ -2780,5 +2769,5 @@
             ✨ Made with ❤️ for better financial management
         </div>
     </div>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c7ca563812721',t:'MTc1Mzc5MDc1MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966c7fe80595d036',t:'MTc1Mzc5MDg4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
