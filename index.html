@@ -277,6 +277,12 @@
         </h1>
 
         <div class="message-box" id="messageBox"></div>
+        
+        <!-- Debugging Info (will be removed later) -->
+        <div id="debug-info" class="text-xs text-gray-400 mb-4">
+            <p id="debug-start-param-status">Start Param Status: Not received</p>
+            <p id="debug-data-parse-status">Data Parse Status: Pending</p>
+        </div>
 
         <div class="top-nav-buttons">
             <button class="top-nav-button active" id="btn-add-transaction" onclick="showPage('add-transaction-page')">บันทึกรายการ ✨</button>
@@ -429,6 +435,8 @@
         Telegram.WebApp.expand(); // Expand the Mini App to full height
 
         const messageBox = document.getElementById('messageBox');
+        const debugStartParamStatus = document.getElementById('debug-start-param-status');
+        const debugDataParseStatus = document.getElementById('debug-data-parse-status');
         
         // Global variables to store data from the bot
         let appData = {}; 
@@ -498,7 +506,6 @@
                 renderSetBudgetPage();
                 budgetAmountInput.value = ''; // Clear input field
             }
-            // Removed: Telegram.WebApp.viewportChanged(); // This line caused the error
         }
 
         // Function to show messages (similar to Telegram.WebApp.showAlert but in-app)
@@ -515,6 +522,7 @@
 
         // Renders data for the "บันทึกรายการ" (Add Transaction) page
         function renderDashboard() {
+            console.log("renderDashboard called. appData:", appData);
             // Update summary section
             if (appData.summary) {
                 monthlyBalanceElemAddPage.textContent = `${appData.summary.balance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
@@ -543,7 +551,8 @@
                     const amountColorClass = t.type === 'income' ? 'income-value' : 'expense-value';
                     const formattedAmount = t.amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const detailText = t.detail && t.detail !== 'ไม่มีรายละเอียด' ? ` (${t.detail})` : '';
-                    const transactionDate = new Date(t.date); // Convert ISO string back to Date object
+                    // Ensure date is handled correctly, it should already be an ISO string from Python
+                    const transactionDate = new Date(t.date); 
                     const timeString = transactionDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
                     itemDiv.innerHTML = `
@@ -561,6 +570,7 @@
 
         // Renders data for the "สรุป & งบประมาณ" (Summary & Budget) page
         function renderSummaryAndBudgets() {
+            console.log("renderSummaryAndBudgets called. appData:", appData);
             // Monthly Summary
             if (appData.summary) {
                 monthlyIncomeSummaryPage.textContent = `${appData.summary.income.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
@@ -582,10 +592,6 @@
             // Current Budgets
             currentBudgetsDiv.innerHTML = '';
             if (appData.budgets && Object.keys(appData.budgets).length > 0) {
-                // To display "spent" and "remaining", we need to calculate it here
-                // For now, appData.budgets only has the limit.
-                // A more complete solution would require the bot to send `expense_by_category` for the current month.
-                // For this example, we'll just show the budget limit.
                 for (const category in appData.budgets) {
                     const budgetAmount = appData.budgets[category];
                     const budgetItemDiv = document.createElement('div');
@@ -603,34 +609,36 @@
 
         // Renders data for the "จัดการหมวดหมู่" (Manage Categories) page
         function renderManageCategories() {
+            console.log("renderManageCategories called. userCategories:", userCategories);
             incomeCategoriesList.innerHTML = '';
             expenseCategoriesList.innerHTML = '';
 
-            if (userCategories["รายรับ"].length === 0) {
-                incomeCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายรับ</p>';
-            } else {
+            if (userCategories["รายรับ"] && userCategories["รายรับ"].length > 0) {
                 userCategories["รายรับ"].forEach(cat => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'category-item';
                     itemDiv.innerHTML = `<span class="category-name-col">${cat}</span>`;
                     incomeCategoriesList.appendChild(itemDiv);
                 });
+            } else {
+                incomeCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายรับ</p>';
             }
 
-            if (userCategories["รายจ่าย"].length === 0) {
-                expenseCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายจ่าย</p>';
-            } else {
+            if (userCategories["รายจ่าย"] && userCategories["รายจ่าย"].length > 0) {
                 userCategories["รายจ่าย"].forEach(cat => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'category-item';
                     itemDiv.innerHTML = `<span class="category-name-col">${cat}</span>`;
                     expenseCategoriesList.appendChild(itemDiv);
                 });
+            } else {
+                expenseCategoriesList.innerHTML = '<p class="text-gray-500">ไม่มีหมวดหมู่รายจ่าย</p>';
             }
         }
 
         // Renders data for the "ตั้งงบประมาณ" (Set Budget) page
         function renderSetBudgetPage() {
+            console.log("renderSetBudgetPage called. userCategories:", userCategories, "appData.budgets:", appData.budgets);
             // Populate budget category select with expense categories
             budgetCategorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>';
             const expenseCategories = userCategories['รายจ่าย'];
@@ -670,14 +678,22 @@
 
         // Function to populate categories dropdown for transaction form based on selected type
         function populateCategories(type) {
+            console.log("populateCategories called with type:", type);
             categorySelect.innerHTML = '<option value="">เลือกหมวดหมู่</option>'; // Reset
             const categories = userCategories[type === 'income' ? 'รายรับ' : 'รายจ่าย'];
-            categories.forEach(cat => {
+            if (categories && categories.length > 0) {
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.innerText = cat;
+                    categorySelect.appendChild(option);
+                });
+            } else {
                 const option = document.createElement('option');
-                option.value = cat;
-                option.innerText = cat;
+                option.value = '';
+                option.innerText = 'ไม่มีหมวดหมู่';
                 categorySelect.appendChild(option);
-            });
+            }
         }
 
         // Handle type button clicks for transaction form (income/expense)
@@ -720,7 +736,7 @@
                 Telegram.WebApp.sendData(JSON.stringify(transaction));
                 showMessage('บันทึกรายการเรียบร้อยแล้วฮับ! ✨ (Mini App จะปิดในสักครู่)', 'success');
                 transactionForm.reset();
-                Telegram.WebApp.close(); // Close the Mini App after sending data
+                // Telegram.WebApp.close(); // Temporarily disabled for debugging, enable once confident
             } catch (e) {
                 console.error("Error sending transaction data to bot:", e);
                 showMessage("ฮือๆ ส่งข้อมูลรายการไม่สำเร็จฮับ! 😭", 'error');
@@ -761,7 +777,7 @@
                 Telegram.WebApp.sendData(JSON.stringify(dataToSend));
                 showMessage(`ส่งข้อมูลเพิ่มหมวดหมู่ '${newCategoryName}' แล้วฮับ! ✨ (Mini App จะปิดในสักครู่)`, 'success');
                 addCategoryForm.reset();
-                Telegram.WebApp.close(); // Close the Mini App after sending data
+                // Telegram.WebApp.close(); // Temporarily disabled for debugging, enable once confident
             } catch (e) {
                 console.error("Error sending add category data to bot:", e);
                 showMessage("ฮือๆ ส่งข้อมูลเพิ่มหมวดหมู่ไม่สำเร็จฮับ! 😭", 'error');
@@ -794,7 +810,7 @@
                 Telegram.WebApp.sendData(JSON.stringify(budgetData));
                 showMessage(`ตั้งงบประมาณสำหรับ '${category}' เรียบร้อยแล้วฮับ! ✨ (Mini App จะปิดในสักครู่)`, 'success');
                 setBudgetForm.reset();
-                Telegram.WebApp.close(); // Close the Mini App after sending data
+                // Telegram.WebApp.close(); // Temporarily disabled for debugging, enable once confident
             } catch (e) {
                 console.error("Error sending set budget data to bot:", e);
                 showMessage("ฮือๆ ส่งข้อมูลงบประมาณไม่สำเร็จฮับ! 😭", 'error');
@@ -803,43 +819,79 @@
 
 
         // --- Initial Load Logic ---
+        // This function will be called once Telegram.WebApp is ready
+        Telegram.WebApp.onEvent('mainButtonClicked', function() {
+            // This is just an example. You might not need this if your app doesn't have a main button.
+            // If you do, handle its logic here.
+            console.log("Main button clicked!");
+        });
+
         // Check if start_param exists and parse it
-        if (Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param) {
-            try {
+        function loadInitialData() {
+            console.log("Attempting to load initial data...");
+            if (Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param) {
+                debugStartParamStatus.textContent = "Start Param Status: Received";
+                debugStartParamStatus.style.color = 'green';
                 const encodedData = Telegram.WebApp.initDataUnsafe.start_param;
-                // Use decodeURIComponent for URL decoding (replace + with space for proper decoding)
-                const decodedData = decodeURIComponent(encodedData.replace(/\+/g, ' ')); 
-                appData = JSON.parse(decodedData);
-                console.log("Initial data loaded:", appData); // Log to console for debugging
+                console.log("Encoded start_param:", encodedData);
+                
+                try {
+                    // Use decodeURIComponent for URL decoding (replace + with space for proper decoding)
+                    const decodedData = decodeURIComponent(encodedData.replace(/\+/g, ' ')); 
+                    console.log("Decoded data string:", decodedData);
+                    
+                    appData = JSON.parse(decodedData);
+                    console.log("Parsed appData:", appData); // Log to console for debugging
 
-                // Update global categories
-                if (appData.categories) {
-                    userCategories = appData.categories;
+                    debugDataParseStatus.textContent = "Data Parse Status: Success";
+                    debugDataParseStatus.style.color = 'green';
+
+                    // Update global categories
+                    if (appData.categories) {
+                        userCategories = appData.categories;
+                        console.log("userCategories updated:", userCategories);
+                    } else {
+                        console.warn("appData.categories is missing or empty.");
+                        // Fallback to default categories if not provided
+                        userCategories = { "รายรับ": ["เงินเดือน", "อื่นๆ (รายรับ)"], "รายจ่าย": ["ค่าอาหาร", "อื่นๆ (รายจ่าย)"] };
+                    }
+
+                    // Initial rendering of the active page
+                    showPage('add-transaction-page'); 
+
+                } catch (e) {
+                    console.error("Error parsing initial data:", e);
+                    showMessage("ฮือๆ เกิดข้อผิดพลาดในการโหลดข้อมูลฮับ! 😭", 'error');
+                    debugDataParseStatus.textContent = `Data Parse Status: Error (${e.message})`;
+                    debugDataParseStatus.style.color = 'red';
+                    // Fallback to render empty states if data parsing fails
+                    renderDashboard();
+                    renderSummaryAndBudgets();
+                    renderManageCategories();
+                    renderSetBudgetPage();
+                    showPage('add-transaction-page'); 
                 }
+            } else {
+                console.log("No initial data (start_param) found. Rendering default empty states.");
+                debugStartParamStatus.textContent = "Start Param Status: Not received";
+                debugStartParamStatus.style.color = 'red';
+                debugDataParseStatus.textContent = "Data Parse Status: No start_param";
+                debugDataParseStatus.style.color = 'orange';
 
-                // Initial rendering of the active page
-                showPage('add-transaction-page'); 
-
-            } catch (e) {
-                console.error("Error parsing initial data:", e);
-                showMessage("ฮือๆ เกิดข้อผิดพลาดในการโหลดข้อมูลฮับ! 😭", 'error');
-                // Fallback to render empty states if data parsing fails
+                // Fallback to render empty state or default values
                 renderDashboard();
                 renderSummaryAndBudgets();
                 renderManageCategories();
                 renderSetBudgetPage();
                 showPage('add-transaction-page'); 
             }
-        } else {
-            console.log("No initial data (start_param) found. Rendering default empty states.");
-            // If no initial data, still try to render empty state or default values
-            renderDashboard();
-            renderSummaryAndBudgets();
-            renderManageCategories();
-            renderSetBudgetPage();
-            showPage('add-transaction-page'); 
         }
 
+        // Call loadInitialData when the Telegram WebApp is ready
+        Telegram.WebApp.onEvent('viewportChanged', loadInitialData); // Use viewportChanged as a reliable trigger
+        Telegram.WebApp.onEvent('themeChanged', loadInitialData); // Also trigger on theme change for robustness
+        // Call it immediately in case events already fired or for initial load
+        loadInitialData(); 
     </script>
 </body>
 </html>
